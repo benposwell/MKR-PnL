@@ -6,7 +6,8 @@
     "codespaces": {
       "openFiles": [
         "README.md",
-        "streamlit_app.py"
+        "Positions.py"
+        // "streamlit_app.py"
       ]
     },
     "vscode": {
