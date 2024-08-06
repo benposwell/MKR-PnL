@@ -4,8 +4,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
-import yaml
-# from streamlit.legacy_caching import clear_cache
 
 from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path
 
@@ -32,6 +30,7 @@ def get_data():
 
     df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)
     
+    
     exclude_columns = ['Book Name', 'Holding Scenario', 'Description', 'Active']
 
     for column in df.columns:
@@ -52,7 +51,9 @@ if st.session_state.data is None:
     st.warning("Please click 'Refresh Data' to load the data.")
 else:
     data = st.session_state.data
-    data = data[data['Notional Quantity'] != 0]
+    # st.write(data)
+    # data = data[data['Notional Quantity'] != 0]
+    # st.write(data)
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions"])
 
     def create_bar_chart(data, x, y, title, x_title, y_title, hover_data):
@@ -107,12 +108,11 @@ else:
             st.write(df_filtered[['Book Name', 'Description', 'Notional Quantity', 'Fincad Price', '$ Daily P&L']]) #'Par Swap Rate'
         else:
             st.subheader("Aggregated Data by Book Name")
-            aggregated_data = df_filtered[['Book Name', '$ Daily P&L', 'Book DV01']].groupby("Book Name", as_index=False).sum()
+            aggregated_data = df_filtered[['Book Name', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L', 'Book DV01']].groupby("Book Name", as_index=False).sum()
             aggregated_data['$ Daily P&L'] = pd.to_numeric(aggregated_data['$ Daily P&L'], errors='coerce')
             aggregated_data['$ Daily P&L'] = aggregated_data['$ Daily P&L'].fillna(0)
 
             total_pnl = aggregated_data['$ Daily P&L'].sum()
-            # st.write(type(aggregated_data['$ Daily P&L'].sum()))
             aggregated_data = pd.concat([aggregated_data, pd.DataFrame({'Book Name': ['Total'], '$ Daily P&L': [total_pnl]})])
             st.write(aggregated_data)
 

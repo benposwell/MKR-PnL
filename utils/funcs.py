@@ -16,7 +16,6 @@ def get_csv_from_sharepoint_by_path(client_id, client_secret, tenant_id, site_id
     result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
     
     if "access_token" in result:
-        # Construct the API URL to get the file using the full path
         api_url = f"{graph_url}/sites/{site_id}/drive/root:{file_path}:/content"
         
         headers = {
