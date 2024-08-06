@@ -7,7 +7,7 @@ import plotly.io as pio
 import yaml
 # from streamlit.legacy_caching import clear_cache
 
-from utils.funcs import convert_to_float, get_excel_links_sharepoint
+from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path
 
 pio.templates.default = "plotly"
 

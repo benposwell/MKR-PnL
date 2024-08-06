@@ -26,17 +26,9 @@ def get_csv_from_sharepoint_by_path(client_id, client_secret, tenant_id, site_id
         response = requests.get(api_url, headers=headers)
         
         if response.status_code == 200:
-            # Read the CSV content
             csv_content = StringIO(response.text)
             df = pd.read_csv(csv_content)
-            
-            # Convert columns to float where possible
-            for column in df.columns:
-                if df[column].dtype == 'object':
-                    try:
-                        df[column] = df[column].apply(convert_to_float)
-                    except:
-                        pass
+        
             return df
         else:
             st.error(f"Error: {response.status_code}, {response.text}")
