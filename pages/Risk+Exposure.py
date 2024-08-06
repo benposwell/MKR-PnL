@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import time
-from utils.funcs import convert_to_float, get_excel_links_sharepoint
+from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path
 import re
 
 st.set_page_config(page_title="Risk & Exposure",
@@ -17,7 +17,6 @@ st.title('Risk & Exposure Report')
 if 'data' not in st.session_state:
     st.session_state.data = None  
   
-# @st.cache_data
 def get_data():
     CLIENT_ID = st.secrets["CLIENT_ID"]
     CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
@@ -26,8 +25,9 @@ def get_data():
     FILE_ID = st.secrets["FILE_ID"]
     SHEET_NAME = st.secrets["SHEET_NAME"]
     RANGE_ADDRESS = st.secrets["RANGE_ADDRESS"]
+    FILE_PATH = st.secrets["FILE_PATH"]
 
-    df = get_excel_links_sharepoint(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_ID, SHEET_NAME, RANGE_ADDRESS)
+    df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)
     
     exclude_columns = ['Book Name', 'Holding Scenario', 'Description', 'Active']
 

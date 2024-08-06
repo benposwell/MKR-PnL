@@ -2,8 +2,9 @@ import requests
 from msal import ConfidentialClientApplication
 import streamlit as st
 import pandas as pd
+from io import StringIO
 
-def get_excel_links_sharepoint(client_id, client_secret, tenant_id, site_id, excel_file_id, sheet_name, range_address):
+def get_csv_from_sharepoint_by_path(client_id, client_secret, tenant_id, site_id, file_path):
     graph_url = "https://graph.microsoft.com/v1.0"
     
     app = ConfidentialClientApplication(
@@ -13,27 +14,23 @@ def get_excel_links_sharepoint(client_id, client_secret, tenant_id, site_id, exc
     )
     
     result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
-    # table_id = "{EF9B9AEB-3467-4782-B0C4-980E474B002B}"
     
     if "access_token" in result:
-        api_url = f"{graph_url}/sites/{site_id}/drive/items/{excel_file_id}/workbook/worksheets/{sheet_name}/range(address='{range_address}')"
+        # Construct the API URL to get the file using the full path
+        api_url = f"{graph_url}/sites/{site_id}/drive/root:{file_path}:/content"
         
         headers = {
-            'Authorization': 'Bearer ' + result['access_token'],
-            'Content-Type': 'application/json'
+            'Authorization': 'Bearer ' + result['access_token']
         }
 
         response = requests.get(api_url, headers=headers)
         
-        # st.write(response.status_code)
         if response.status_code == 200:
-            data = response.json()
-            values = data['values']
-
-            headers = values[0]
-            data_rows = values[2:]
-
-            df = pd.DataFrame(data_rows, columns=headers)
+            # Read the CSV content
+            csv_content = StringIO(response.text)
+            df = pd.read_csv(csv_content)
+            
+            # Convert columns to float where possible
             for column in df.columns:
                 if df[column].dtype == 'object':
                     try:
@@ -42,8 +39,10 @@ def get_excel_links_sharepoint(client_id, client_secret, tenant_id, site_id, exc
                         pass
             return df
         else:
+            st.error(f"Error: {response.status_code}, {response.text}")
             return None
     else:
+        st.error("Failed to acquire token")
         return None
     
 def convert_to_float(value):

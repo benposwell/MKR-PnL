@@ -7,7 +7,7 @@ import plotly.io as pio
 import yaml
 # from streamlit.legacy_caching import clear_cache
 
-from utils.funcs import convert_to_float, get_excel_links_sharepoint
+from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path
 
 pio.templates.default = "plotly"
 
@@ -28,8 +28,9 @@ def get_data():
     FILE_ID = st.secrets["FILE_ID"]
     SHEET_NAME = st.secrets["SHEET_NAME"]
     RANGE_ADDRESS = st.secrets["RANGE_ADDRESS"]
+    FILE_PATH = st.secrets["FILE_PATH"]
 
-    df = get_excel_links_sharepoint(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_ID, SHEET_NAME, RANGE_ADDRESS)
+    df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)
     
     exclude_columns = ['Book Name', 'Holding Scenario', 'Description', 'Active']
 
