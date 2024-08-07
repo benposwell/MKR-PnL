@@ -54,7 +54,6 @@ if st.session_state.data is None:
     st.warning("Please click 'Refresh Data' to load the data.")
 else:
     data = st.session_state.data
-    st.write(data)
     data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%Y')
     max_date = data['Date'].max().strftime('%d/%m/%Y')
     st.subheader(body=f"MKR Daily Report for {max_date}")
