@@ -4,8 +4,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
+from plotly.subplots import make_subplots
 
-from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path
+from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path, extract_currency_pair
 
 pio.templates.default = "plotly"
 
@@ -40,20 +41,23 @@ def get_data():
     return df
 
 if st.button("Refresh Data"):
+    st.divider()
     progress_bar = st.progress(0)
     status_text = st.empty()
     status_text.text("Loading data...")
     st.session_state.data = get_data()
     progress_bar.progress(100)
     status_text.text("Data Loaded!")
+    st.divider()
 
 if st.session_state.data is None:
     st.warning("Please click 'Refresh Data' to load the data.")
 else:
     data = st.session_state.data
-    # st.write(data)
-    # data = data[data['Notional Quantity'] != 0]
-    # st.write(data)
+    st.write(data)
+    data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%Y')
+    max_date = data['Date'].max().strftime('%d/%m/%Y')
+    st.subheader(body=f"MKR Daily Report for {max_date}")
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions"])
 
     def create_bar_chart(data, x, y, title, x_title, y_title, hover_data):
@@ -68,6 +72,7 @@ else:
         return fig
 
     with tab1:
+        # Create Book Selector
         container = st.container()
         all = st.checkbox("Select all")
         all_books = data['Book Name'].unique()
@@ -79,26 +84,26 @@ else:
             selected_books =  container.multiselect("Select Book Name(s):",
                 all_books)
 
+        # Prepare Data
         df_filtered = data[data["Book Name"].isin(selected_books)]
+        total_pnl = df_filtered.groupby("Book Name")['$ Daily P&L'].sum().reset_index()
+        total_pnl.columns = ['Book Name', 'Total Daily P&L']
 
-        fig = px.bar(df_filtered, x="Book Name", y='$ Daily P&L',
-                    title='Daily P&L by Book',
-                    hover_data=['Description', 'Notional Quantity', 'Fincad Price']#, 'Par Swap Rate']
-        )
-        fig.update_layout(
-            xaxis_title="Book Name",
-            yaxis_title="Daily P&L (USD)",
-            hovermode="closest"
-        )
+        # Create Plots
+        fig = px.bar(df_filtered, x="Book Name", y='$ Daily P&L', title='Contributors to Daily P&L by Book', hover_data=['Description', 'Notional Quantity', 'Fincad Price'])#, 'Par Swap Rate'])
+        fig.update_layout(xaxis_title="Book Name", yaxis_title="Daily P&L (USD)", hovermode="closest" )
 
+        fig_total = px.bar(total_pnl, x='Book Name', y='Total Daily P&L', title = 'Total Daily P&L by Book')
+        fig_total.update_layout(xaxis_title="Book Name", yaxis_title="Total Daily P&L (USD)", hovermode="closest")
 
+        st.plotly_chart(fig_total, use_container_width=True)
         st.plotly_chart(fig, use_container_width=True)
 
+        # Show Raw Data
         if 'expanded_view' not in st.session_state:
             st.session_state.expanded_view = False
 
         toggle_view_button = st.button("Show More")
-
 
         if toggle_view_button:
             st.session_state.expanded_view = not st.session_state.expanded_view
@@ -117,39 +122,54 @@ else:
             st.write(aggregated_data)
 
     with tab2:
+        # Create Book Selector & Filter Data
         books = ['DM FX', 'EM FX']
         book = st.multiselect("Select a book", books)
 
         currency_data = data[data["Book Name"].isin(book)]
-        fig1 = px.bar(currency_data, x="Description", y="Notional Quantity",
-                    title="FX Positions",
-                    hover_data=['Fincad Price', '$ Daily P&L'])
-        
-        fig1.update_layout(
-            xaxis_title="Currency",
-            yaxis_title="Notional Quantity",
-            hovermode="closest"
-        )
-        st.plotly_chart(fig1, use_container_width=True)
+        # currency_data = currency_data[currency_data['Notional Quantity'] != 0]
+        currency_data = currency_data[((currency_data['Notional Quantity'] != 0) | (currency_data['$ Daily P&L'] != 0))]
 
-        st.dataframe(currency_data[['Book Name', 'Description', 'Notional Quantity', 'Fincad Price', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L']])
+        currency_data['Currency Pair'] = currency_data['Description'].apply(extract_currency_pair)
+
+        # Generate Chart
+        fig1 = make_subplots(specs=[[{"secondary_y": True}]])
+        fig1.add_trace(
+            go.Bar(x=currency_data['Currency Pair'], y=currency_data['Notional Quantity'], name='Notional Quantity'), secondary_y=False
+        )
+        fig1.add_trace(
+            go.Scatter(x=currency_data['Currency Pair'], y=currency_data['$ Daily P&L'], name="Daily P&L", mode='markers', marker=dict(
+                color='black', size=5, symbol='diamond'
+            )), secondary_y=True
+        )
+        fig1.update_layout(title_text="FX Positions", xaxis_title="Currency", hovermode="closest")
+        fig1.update_yaxes(title_text="Notional Quantity", secondary_y=False)
+        fig1.update_yaxes(title_text="$ Daily P&L", secondary_y=True)
+
+        # Display Chart and Data
+        st.plotly_chart(fig1, use_container_width=True)
+        st.dataframe(currency_data[['Book Name', 'Currency Pair', 'Notional Quantity', 'Fincad Price', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L']])
 
     with tab3:
         books = ['USD rates', 'DM Rates', 'Equity trading']
         book = st.multiselect("Select a book", books, key="futures_book")
 
-        
-
         futures_data = data[data["Book Name"].isin(book)]
-        fig2 = px.bar(futures_data, x="Description", y="Notional Quantity",
-                    title="Futures Positions",
-                    hover_data=['Fincad Price', '$ Daily P&L'])
-        
-        fig2.update_layout(
-            xaxis_title="Description",
-            yaxis_title="Notional Quantity",
-            hovermode="closest"
+        futures_data = futures_data[((futures_data['Notional Quantity'] != 0) | (futures_data['$ Daily P&L'] != 0))]
+
+        fig2 = make_subplots(specs=[[{"secondary_y": True}]])
+        fig2.add_trace(
+            go.Bar(x=futures_data['Description'], y=futures_data['Notional Quantity'], name='Notional Quantity'), secondary_y=False
         )
+        fig2.add_trace(
+            go.Scatter(x=futures_data['Description'], y=futures_data['$ Daily P&L'], name="Daily P&L", mode='markers', marker=dict(
+                color='black', size=5, symbol='diamond'
+            )), secondary_y=True
+        )
+        fig2.update_layout(title_text="Futures Positions", xaxis_title="Description", hovermode="closest")
+        fig2.update_yaxes(title_text="Notional Quantity", secondary_y=False)
+        fig2.update_yaxes(title_text="$ Daily P&L", secondary_y=True)
+
         st.plotly_chart(fig2, use_container_width=True)
 
         st.dataframe(futures_data[['Book Name', 'Description', 'Notional Quantity', 'Fincad Price', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L']])
@@ -159,17 +179,37 @@ else:
         book = st.multiselect("Select a book", books, key="swaps_book")
 
         swaps_data = data[data["Book Name"].isin(book)]
-        fig3 = px.bar(swaps_data, x="Description", y="Notional Quantity",
-                    title="Swaps Positions",
-                    hover_data=['Fincad Price', '$ Daily P&L'])#, 'Par Swap Rate'])
-        
+        swaps_data = swaps_data[((swaps_data['Notional Quantity'] != 0) | (swaps_data['$ Daily P&L'] != 0))]
+
+        fig3 = make_subplots(specs=[[{"secondary_y": True}]])
+
+        # Add bar chart for Notional Quantity
+        fig3.add_trace(
+            go.Bar(x=swaps_data['Description'], y=swaps_data['Notional Quantity'], name='Notional Quantity'),
+            secondary_y=False
+        )
+
+        # Add scatter plot for Daily P&L
+        fig3.add_trace(
+            go.Scatter(x=swaps_data['Description'], y=swaps_data['$ Daily P&L'], name="Daily P&L", mode='markers', marker=dict(
+                color='black', size=5, symbol='diamond'
+            )),
+            secondary_y=True
+        )
+
+        # Update layout
         fig3.update_layout(
+            title_text="Swaps Positions",
             xaxis_title="Description",
-            yaxis_title="Notional Quantity",
             hovermode="closest"
         )
-        st.plotly_chart(fig3, use_container_width=True)
 
+        # Update y-axes titles
+        fig3.update_yaxes(title_text="Notional Quantity", secondary_y=False)
+        fig3.update_yaxes(title_text="$ Daily P&L", secondary_y=True)
+
+        # Display the chart in Streamlit
+        st.plotly_chart(fig3, use_container_width=True)
         st.dataframe(swaps_data[['Book Name', 'Description', 'Notional Quantity', 'Fincad Price', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L']]) #Par Swap Rate'
 
     with tab5:
@@ -177,17 +217,37 @@ else:
         book = st.multiselect("Select a book", books, key="options_book")
 
         options_data = data[data["Book Name"].isin(book)]
-        fig4 = px.bar(options_data, x="Description", y="Notional Quantity",
-                    title="Swaps Positions",
-                    hover_data=['Fincad Price', '$ Daily P&L'])#, 'Par Swap Rate'])
-        
+        options_data_filtered = options_data[(options_data['Notional Quantity'] != 0) | (options_data['$ Daily P&L'] != 0)]
+
+        fig4 = make_subplots(specs=[[{"secondary_y": True}]])
+
+        # Add bar chart for Notional Quantity
+        fig4.add_trace(
+            go.Bar(x=options_data_filtered['Description'], y=options_data_filtered['Notional Quantity'], name='Notional Quantity'),
+            secondary_y=False
+        )
+
+        # Add scatter plot for Daily P&L
+        fig4.add_trace(
+            go.Scatter(x=options_data_filtered['Description'], y=options_data_filtered['$ Daily P&L'], name="Daily P&L", mode='markers', marker=dict(
+                color='black', size=5, symbol='diamond'
+            )),
+            secondary_y=True
+        )
+
+        # Update layout
         fig4.update_layout(
+            title_text="Options Positions",
             xaxis_title="Description",
-            yaxis_title="Notional Quantity",
             hovermode="closest"
         )
-        st.plotly_chart(fig4, use_container_width=True)
 
+        # Update y-axes titles
+        fig4.update_yaxes(title_text="Notional Quantity", secondary_y=False)
+        fig4.update_yaxes(title_text="$ Daily P&L", secondary_y=True)
+
+        # Display the chart in Streamlit
+        st.plotly_chart(fig4, use_container_width=True)
         st.dataframe(options_data[['Book Name', 'Description', 'Notional Quantity', 'Fincad Price', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L']])
 
 

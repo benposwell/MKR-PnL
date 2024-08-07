@@ -3,6 +3,7 @@ from msal import ConfidentialClientApplication
 import streamlit as st
 import pandas as pd
 from io import StringIO
+import re
 
 def get_csv_from_sharepoint_by_path(client_id, client_secret, tenant_id, site_id, file_path):
     graph_url = "https://graph.microsoft.com/v1.0"
@@ -46,3 +47,10 @@ def convert_to_float(value):
     elif isinstance(value, (int, float)):
         return float(value)
     return value
+
+def extract_currency_pair(description):
+    # Use regex to find the currency pair pattern
+    match = re.search(r'[A-Z]{3}/[A-Z]{3}', description)
+    if match:
+        return match.group(0)
+    return None

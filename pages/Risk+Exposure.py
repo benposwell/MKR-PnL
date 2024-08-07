@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import time
-from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path
+from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path, extract_currency_pair
 import re
 import os
 
