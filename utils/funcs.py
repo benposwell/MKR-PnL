@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 from io import StringIO
 import re
+import plotly.express as px
 
 def get_csv_from_sharepoint_by_path(client_id, client_secret, tenant_id, site_id, file_path):
     graph_url = "https://graph.microsoft.com/v1.0"
@@ -54,3 +55,6 @@ def extract_currency_pair(description):
     if match:
         return match.group(0)
     return None
+
+def generate_file_path(today, base="/ProfitLoss/data"):
+    return f"{base}_{today}.csv"

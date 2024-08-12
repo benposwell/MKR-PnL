@@ -6,20 +6,20 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 
-from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path, extract_currency_pair
+from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path, extract_currency_pair, generate_file_path
 
 pio.templates.default = "plotly"
 
 st.set_page_config(page_title='Position & P/L Report', page_icon=':chart_with_upwards_trend:', layout='wide', initial_sidebar_state='collapsed')
 st.image('images/Original Logo.png')
-st.title('Position & P/L Report')
+# st.title('Position & P/L Report')
 
 
 if 'data' not in st.session_state:
     st.session_state.data = None  
   
 # @st.cache_data
-def get_data():
+def get_data(selected_date):
     CLIENT_ID = st.secrets["CLIENT_ID"]
     CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
     TENANT_ID = st.secrets["TENANT_ID"]
@@ -28,6 +28,7 @@ def get_data():
     SHEET_NAME = st.secrets["SHEET_NAME"]
     RANGE_ADDRESS = st.secrets["RANGE_ADDRESS"]
     FILE_PATH = st.secrets["FILE_PATH"]
+    FILE_PATH = generate_file_path(selected_date)
 
     df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)
     
@@ -40,15 +41,16 @@ def get_data():
 
     return df
 
+st.divider()
+selected_date = st.date_input("Select a date", value=pd.to_datetime('today').date())
 if st.button("Refresh Data"):
-    st.divider()
     progress_bar = st.progress(0)
     status_text = st.empty()
     status_text.text("Loading data...")
-    st.session_state.data = get_data()
+    st.session_state.data = get_data(selected_date)
     progress_bar.progress(100)
     status_text.text("Data Loaded!")
-    st.divider()
+st.divider()    
 
 if st.session_state.data is None:
     st.warning("Please click 'Refresh Data' to load the data.")
@@ -56,7 +58,25 @@ else:
     data = st.session_state.data
     data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%Y')
     max_date = data['Date'].max().strftime('%d/%m/%Y')
-    st.subheader(body=f"MKR Daily Report for {max_date}")
+    # st.subheader(body=f"MKR Daily Report for {max_date}")
+    # tab1, tab2, tab3, tab4, tab5 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions"])
+
+    st.markdown(f"""
+    <div style="text-align: center;">
+        <h2>MKR Daily Report for {max_date}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Center the tabs using CSS
+    st.markdown("""
+        <style>
+            .css-1y0tads {
+                justify-content: center;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
+    # Create the tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions"])
 
     def create_bar_chart(data, x, y, title, x_title, y_title, hover_data):
@@ -88,9 +108,20 @@ else:
         total_pnl = df_filtered.groupby("Book Name")['$ Daily P&L'].sum().reset_index()
         total_pnl.columns = ['Book Name', 'Total Daily P&L']
 
+        total_itd_pnl = df_filtered.groupby("Book Name")['$ P&L'].sum().reset_index()
+        total_itd_pnl.columns = ['Book Name', 'Total ITD P&L']
+
+        total_ytd_pnl = df_filtered.groupby("Book Name")['$ YTD P&L'].sum().reset_index()
+        total_ytd_pnl.columns = ['Book Name', 'Total YTD P&L']
+
         # Create Plots
         fig = px.bar(df_filtered, x="Book Name", y='$ Daily P&L', title='Contributors to Daily P&L by Book', hover_data=['Description', 'Notional Quantity', 'Fincad Price'])#, 'Par Swap Rate'])
         fig.update_layout(xaxis_title="Book Name", yaxis_title="Daily P&L (USD)", hovermode="closest" )
+        
+        fig_ytd = px.bar(total_ytd_pnl, x="Book Name", y='Total YTD P&L', title="YTD P&L by Book")
+        fig_itd = px.bar(total_itd_pnl, x="Book Name", y='Total ITD P&L', title="ITD P&L by Book")
+        fig_ytd.update_layout(xaxis_title="Book Name", yaxis_title="YTD P&L (USD)", hovermode="closest")
+        fig_itd.update_layout(xaxis_title="Book Name", yaxis_title="ITD P&L (USD)", hovermode="closest")
 
         fig_total = px.bar(total_pnl, x='Book Name', y='Total Daily P&L', title = 'Total Daily P&L by Book')
         fig_total.update_layout(xaxis_title="Book Name", yaxis_title="Total Daily P&L (USD)", hovermode="closest")
@@ -101,24 +132,35 @@ else:
         # Show Raw Data
         if 'expanded_view' not in st.session_state:
             st.session_state.expanded_view = False
-
+        
+        st.markdown("**Aggregated Data by Book Name**")
         toggle_view_button = st.button("Show More")
 
         if toggle_view_button:
             st.session_state.expanded_view = not st.session_state.expanded_view
-
+        
+        
         if st.session_state.expanded_view:
             st.subheader("All Positions")
             st.write(df_filtered[['Book Name', 'Description', 'Notional Quantity', 'Fincad Price', '$ Daily P&L']]) #'Par Swap Rate'
         else:
-            st.subheader("Aggregated Data by Book Name")
+            
             aggregated_data = df_filtered[['Book Name', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L', 'Book DV01']].groupby("Book Name", as_index=False).sum()
             aggregated_data['$ Daily P&L'] = pd.to_numeric(aggregated_data['$ Daily P&L'], errors='coerce')
             aggregated_data['$ Daily P&L'] = aggregated_data['$ Daily P&L'].fillna(0)
 
-            total_pnl = aggregated_data['$ Daily P&L'].sum()
-            aggregated_data = pd.concat([aggregated_data, pd.DataFrame({'Book Name': ['Total'], '$ Daily P&L': [total_pnl]})])
+            total_daily_pnl = aggregated_data['$ Daily P&L'].sum()
+            total_yearly_pnl = aggregated_data['$ YTD P&L'].sum()
+            total_itd_pnl = aggregated_data['$ P&L'].sum()
+            
+            aggregated_data = pd.concat([aggregated_data, pd.DataFrame({'Book Name': ['Total'], '$ Daily P&L': [total_daily_pnl], '$ YTD P&L': [total_yearly_pnl], '$ P&L': [total_itd_pnl]})])#, ignore_index=True)
             st.write(aggregated_data)
+
+        st.divider()
+        st.subheader("Long Term Performance")
+        st.plotly_chart(fig_ytd, use_container_width=True)
+        st.plotly_chart(fig_itd, use_container_width=True)
+        st.divider()
 
     with tab2:
         # Create Book Selector & Filter Data
@@ -148,6 +190,35 @@ else:
         # Display Chart and Data
         st.plotly_chart(fig1, use_container_width=True)
         st.dataframe(currency_data[['Book Name', 'Currency Pair', 'Notional Quantity', 'Fincad Price', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L']])
+
+        st.divider()
+
+        # Currency Exposure Report
+        curr_data = st.session_state.data
+        # Convert Description to String object
+        curr_data['Description'] = curr_data['Description'].astype(str)
+        curr_data['Currency'] = curr_data['Description'].apply(extract_currency_pair)
+        curr_data = curr_data[['Currency', '$ NMV']]
+
+        # Drop na in currency
+        curr_data = curr_data.dropna(subset=["Currency"], how="any")
+        # to_numeric
+        curr_data['$ NMV'] = pd.to_numeric(curr_data['$ NMV'], errors='coerce')
+        curr_data['$ NMV'] = curr_data['$ NMV'].fillna(0)
+        curr_data = curr_data.groupby("Currency").sum()
+        # Add total
+        total = curr_data.sum()
+        all_data = pd.concat([curr_data, pd.DataFrame({'$ NMV': [total['$ NMV']]}, index=['Total'])])
+        
+        fig = px.bar(all_data, x=all_data.index, y='$ NMV', title="Exposure by Currency", labels={"x": "Currency", "y": "$ NMV"})
+        # fig = create_bar_chart(all_data, "Exposure by Currency", "Currency", "$ NMV", False)
+        # fig = create_bar_chart(curr_data, "Exposure by Currency", "Currency", "Book NMV (Total)", False)
+        st.plotly_chart(fig) 
+        if st.checkbox("Show Raw Data", key="show_raw_data_curr_exp"):
+            st.subheader("Raw Data")
+            st.table(all_data)
+
+
 
     with tab3:
         books = ['USD rates', 'DM Rates', 'Equity trading']
