@@ -78,7 +78,7 @@ else:
         """, unsafe_allow_html=True)
 
     # Create the tabs
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions", "Intraday P+L", "Historical P+L"])
+    # tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions", "Intraday P+L", "Historical P+L"])
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions", "Intraday P+L"])
 
     def create_bar_chart(data, x, y, title, x_title, y_title, hover_data):
