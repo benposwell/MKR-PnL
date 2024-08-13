@@ -5,8 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
+from datetime import datetime
 
-from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path, extract_currency_pair, generate_file_path
+from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path, extract_currency_pair, generate_file_path, process_24h_data, get_files_from_sharepoint_folder
 
 pio.templates.default = "plotly"
 
@@ -20,6 +21,10 @@ if 'data' not in st.session_state:
   
 # @st.cache_data
 def get_data(selected_date):
+    # Time now in YYYY-MM-DD-HH-MM format
+    current_hour = datetime.now().hour
+    formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-{current_hour:02d}-00"
+
     CLIENT_ID = st.secrets["CLIENT_ID"]
     CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
     TENANT_ID = st.secrets["TENANT_ID"]
@@ -28,10 +33,9 @@ def get_data(selected_date):
     SHEET_NAME = st.secrets["SHEET_NAME"]
     RANGE_ADDRESS = st.secrets["RANGE_ADDRESS"]
     FILE_PATH = st.secrets["FILE_PATH"]
-    FILE_PATH = generate_file_path(selected_date)
+    FILE_PATH = generate_file_path(formatted_time)
 
     df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)
-    
     
     exclude_columns = ['Book Name', 'Holding Scenario', 'Description', 'Active']
 
@@ -56,14 +60,13 @@ if st.session_state.data is None:
     st.warning("Please click 'Refresh Data' to load the data.")
 else:
     data = st.session_state.data
-    data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%Y')
-    max_date = data['Date'].max().strftime('%d/%m/%Y')
-    # st.subheader(body=f"MKR Daily Report for {max_date}")
-    # tab1, tab2, tab3, tab4, tab5 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions"])
+    current_date = datetime.now().strftime('%m/%d/%Y')
+    current_hour = datetime.now().hour
 
     st.markdown(f"""
     <div style="text-align: center;">
-        <h2>MKR Daily Report for {max_date}</h2>
+        <h2>MKR Capital Daily Report for {current_date}</h2>
+        <p> Last updated at {current_hour:02d}:00<p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -77,7 +80,8 @@ else:
         """, unsafe_allow_html=True)
 
     # Create the tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions"])
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions", "Intraday P+L", "Historical P+L"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions", "Intraday P+L"])
 
     def create_bar_chart(data, x, y, title, x_title, y_title, hover_data):
         fig = px.bar(data, x=x, y=y,
@@ -108,14 +112,14 @@ else:
         total_pnl = df_filtered.groupby("Book Name")['$ Daily P&L'].sum().reset_index()
         total_pnl.columns = ['Book Name', 'Total Daily P&L']
 
-        total_itd_pnl = df_filtered.groupby("Book Name")['$ P&L'].sum().reset_index()
+        total_itd_pnl = df_filtered.groupby("Book Name")['$ ITD P&L'].sum().reset_index()
         total_itd_pnl.columns = ['Book Name', 'Total ITD P&L']
 
         total_ytd_pnl = df_filtered.groupby("Book Name")['$ YTD P&L'].sum().reset_index()
         total_ytd_pnl.columns = ['Book Name', 'Total YTD P&L']
 
         # Create Plots
-        fig = px.bar(df_filtered, x="Book Name", y='$ Daily P&L', title='Contributors to Daily P&L by Book', hover_data=['Description', 'Notional Quantity', 'Fincad Price'])#, 'Par Swap Rate'])
+        fig = px.bar(df_filtered, x="Book Name", y='$ Daily P&L', title='Contributors to Daily P&L by Book', hover_data=['Description', 'Quantity', 'Par Swap Rate'])
         fig.update_layout(xaxis_title="Book Name", yaxis_title="Daily P&L (USD)", hovermode="closest" )
         
         fig_ytd = px.bar(total_ytd_pnl, x="Book Name", y='Total YTD P&L', title="YTD P&L by Book")
@@ -142,19 +146,19 @@ else:
         
         if st.session_state.expanded_view:
             st.subheader("All Positions")
-            st.write(df_filtered[['Book Name', 'Description', 'Notional Quantity', 'Fincad Price', '$ Daily P&L']]) #'Par Swap Rate'
+            st.dataframe(df_filtered[['Book Name', 'Description', 'Quantity','Par Swap Rate', '$ Daily P&L', '$ YTD P&L', '$ ITD P&L']], use_container_width=True)
         else:
             
-            aggregated_data = df_filtered[['Book Name', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L', 'Book DV01']].groupby("Book Name", as_index=False).sum()
+            aggregated_data = df_filtered[['Book Name', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ ITD P&L']].groupby("Book Name", as_index=False).sum()
             aggregated_data['$ Daily P&L'] = pd.to_numeric(aggregated_data['$ Daily P&L'], errors='coerce')
             aggregated_data['$ Daily P&L'] = aggregated_data['$ Daily P&L'].fillna(0)
 
             total_daily_pnl = aggregated_data['$ Daily P&L'].sum()
             total_yearly_pnl = aggregated_data['$ YTD P&L'].sum()
-            total_itd_pnl = aggregated_data['$ P&L'].sum()
+            total_itd_pnl = aggregated_data['$ ITD P&L'].sum()
             
-            aggregated_data = pd.concat([aggregated_data, pd.DataFrame({'Book Name': ['Total'], '$ Daily P&L': [total_daily_pnl], '$ YTD P&L': [total_yearly_pnl], '$ P&L': [total_itd_pnl]})])#, ignore_index=True)
-            st.write(aggregated_data)
+            aggregated_data = pd.concat([aggregated_data, pd.DataFrame({'Book Name': ['Total'], '$ Daily P&L': [total_daily_pnl], '$ YTD P&L': [total_yearly_pnl], '$ ITD P&L': [total_itd_pnl]})])#, ignore_index=True)
+            st.dataframe(aggregated_data, use_container_width=True)
 
         st.divider()
         st.subheader("Long Term Performance")
@@ -168,15 +172,15 @@ else:
         book = st.multiselect("Select a book", books)
 
         currency_data = data[data["Book Name"].isin(book)]
-        # currency_data = currency_data[currency_data['Notional Quantity'] != 0]
-        currency_data = currency_data[((currency_data['Notional Quantity'] != 0) | (currency_data['$ Daily P&L'] != 0))]
+        # currency_data = currency_data[currency_data['Quantity'] != 0]
+        currency_data = currency_data[((currency_data['Quantity'] != 0) | (currency_data['$ Daily P&L'] != 0))]
 
         currency_data['Currency Pair'] = currency_data['Description'].apply(extract_currency_pair)
 
         # Generate Chart
         fig1 = make_subplots(specs=[[{"secondary_y": True}]])
         fig1.add_trace(
-            go.Bar(x=currency_data['Currency Pair'], y=currency_data['Notional Quantity'], name='Notional Quantity'), secondary_y=False
+            go.Bar(x=currency_data['Currency Pair'], y=currency_data['Quantity'], name='Quantity'), secondary_y=False
         )
         fig1.add_trace(
             go.Scatter(x=currency_data['Currency Pair'], y=currency_data['$ Daily P&L'], name="Daily P&L", mode='markers', marker=dict(
@@ -184,12 +188,12 @@ else:
             )), secondary_y=True
         )
         fig1.update_layout(title_text="FX Positions", xaxis_title="Currency", hovermode="closest")
-        fig1.update_yaxes(title_text="Notional Quantity", secondary_y=False)
+        fig1.update_yaxes(title_text="Quantity", secondary_y=False)
         fig1.update_yaxes(title_text="$ Daily P&L", secondary_y=True)
 
         # Display Chart and Data
         st.plotly_chart(fig1, use_container_width=True)
-        st.dataframe(currency_data[['Book Name', 'Currency Pair', 'Notional Quantity', 'Fincad Price', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L']])
+        st.dataframe(currency_data[['Book Name', 'Currency Pair', 'Quantity', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ ITD P&L']], use_container_width=True)
 
         st.divider()
 
@@ -216,7 +220,7 @@ else:
         st.plotly_chart(fig) 
         if st.checkbox("Show Raw Data", key="show_raw_data_curr_exp"):
             st.subheader("Raw Data")
-            st.table(all_data)
+            st.dataframe(all_data, use_container_width=True)
 
 
 
@@ -225,11 +229,11 @@ else:
         book = st.multiselect("Select a book", books, key="futures_book")
 
         futures_data = data[data["Book Name"].isin(book)]
-        futures_data = futures_data[((futures_data['Notional Quantity'] != 0) | (futures_data['$ Daily P&L'] != 0))]
+        futures_data = futures_data[((futures_data['Quantity'] != 0) | (futures_data['$ Daily P&L'] != 0))]
 
         fig2 = make_subplots(specs=[[{"secondary_y": True}]])
         fig2.add_trace(
-            go.Bar(x=futures_data['Description'], y=futures_data['Notional Quantity'], name='Notional Quantity'), secondary_y=False
+            go.Bar(x=futures_data['Description'], y=futures_data['Quantity'], name='Quantity'), secondary_y=False
         )
         fig2.add_trace(
             go.Scatter(x=futures_data['Description'], y=futures_data['$ Daily P&L'], name="Daily P&L", mode='markers', marker=dict(
@@ -237,25 +241,25 @@ else:
             )), secondary_y=True
         )
         fig2.update_layout(title_text="Futures Positions", xaxis_title="Description", hovermode="closest")
-        fig2.update_yaxes(title_text="Notional Quantity", secondary_y=False)
+        fig2.update_yaxes(title_text="Quantity", secondary_y=False)
         fig2.update_yaxes(title_text="$ Daily P&L", secondary_y=True)
 
         st.plotly_chart(fig2, use_container_width=True)
 
-        st.dataframe(futures_data[['Book Name', 'Description', 'Notional Quantity', 'Fincad Price', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L']])
+        st.dataframe(futures_data[['Book Name', 'Description', 'Quantity', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ ITD P&L']], use_container_width=True)
 
     with tab4:
         books = ['Cross Market Rates', 'AUD Rates', 'NZD Rates']
         book = st.multiselect("Select a book", books, key="swaps_book")
 
         swaps_data = data[data["Book Name"].isin(book)]
-        swaps_data = swaps_data[((swaps_data['Notional Quantity'] != 0) | (swaps_data['$ Daily P&L'] != 0))]
+        swaps_data = swaps_data[((swaps_data['Quantity'] != 0) | (swaps_data['$ Daily P&L'] != 0))]
 
         fig3 = make_subplots(specs=[[{"secondary_y": True}]])
 
-        # Add bar chart for Notional Quantity
+        # Add bar chart for Quantity
         fig3.add_trace(
-            go.Bar(x=swaps_data['Description'], y=swaps_data['Notional Quantity'], name='Notional Quantity'),
+            go.Bar(x=swaps_data['Description'], y=swaps_data['Quantity'], name='Quantity'),
             secondary_y=False
         )
 
@@ -275,25 +279,25 @@ else:
         )
 
         # Update y-axes titles
-        fig3.update_yaxes(title_text="Notional Quantity", secondary_y=False)
+        fig3.update_yaxes(title_text="Quantity", secondary_y=False)
         fig3.update_yaxes(title_text="$ Daily P&L", secondary_y=True)
 
         # Display the chart in Streamlit
         st.plotly_chart(fig3, use_container_width=True)
-        st.dataframe(swaps_data[['Book Name', 'Description', 'Notional Quantity', 'Fincad Price', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L']]) #Par Swap Rate'
+        st.dataframe(swaps_data[['Book Name', 'Description', 'Quantity', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ ITD P&L', 'Par Swap Rate']], use_container_width=True)
 
     with tab5:
         books = ['FX options']
         book = st.multiselect("Select a book", books, key="options_book")
 
         options_data = data[data["Book Name"].isin(book)]
-        options_data_filtered = options_data[(options_data['Notional Quantity'] != 0) | (options_data['$ Daily P&L'] != 0)]
+        options_data_filtered = options_data[(options_data['Quantity'] != 0) | (options_data['$ Daily P&L'] != 0)]
 
         fig4 = make_subplots(specs=[[{"secondary_y": True}]])
 
-        # Add bar chart for Notional Quantity
+        # Add bar chart for Quantity
         fig4.add_trace(
-            go.Bar(x=options_data_filtered['Description'], y=options_data_filtered['Notional Quantity'], name='Notional Quantity'),
+            go.Bar(x=options_data_filtered['Description'], y=options_data_filtered['Quantity'], name='Quantity'),
             secondary_y=False
         )
 
@@ -313,12 +317,89 @@ else:
         )
 
         # Update y-axes titles
-        fig4.update_yaxes(title_text="Notional Quantity", secondary_y=False)
+        fig4.update_yaxes(title_text="Quantity", secondary_y=False)
         fig4.update_yaxes(title_text="$ Daily P&L", secondary_y=True)
 
         # Display the chart in Streamlit
         st.plotly_chart(fig4, use_container_width=True)
-        st.dataframe(options_data[['Book Name', 'Description', 'Notional Quantity', 'Fincad Price', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ P&L']])
+        st.dataframe(options_data[['Book Name', 'Description', 'Quantity', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ ITD P&L']], use_container_width=True)
+    
+    with tab6:
+        if 'selected_date' not in st.session_state:
+            st.session_state.selected_date = pd.to_datetime('today').date()
+        if 'selected_time' not in st.session_state:
+            st.session_state.selected_time = datetime.now().time()
+
+        st.write("Intraday P&L Analysis")
+        # selected_date = st.date_input("Select a date", value=datetime.date.today()).strftime('%Y-%m-%d')
+
+        selected_date = st.date_input("Select a date", value=st.session_state.selected_date, key="date_input")
+        st.session_state.selected_date = selected_date
+
+        # Time now
+        selected_time = st.time_input("Select a time", value=st.session_state.selected_time, key="time_input")
+        st.session_state.selected_time = selected_time
+
+        formatted_date = selected_date.strftime('%Y-%m-%d')
+        formatted_time = selected_time.strftime('%H-%M')
+
+        combined_df = process_24h_data(f"{formatted_date}-{formatted_time}")
+
+        # Drop rows with null in 'Book Name' column
+        combined_df = combined_df.dropna(subset=['FundShortName'])
+
+        combined_df['date'] = pd.to_datetime(combined_df['date'], format='%Y-%m-%d-%H-%M')
+
+        # Group by date and book name, then sum the '$ Daily P&L'
+        grouped = combined_df.groupby(['date', 'Book Name'])['$ Daily P&L'].sum().reset_index()
+
+        # Calculate the total '$ Daily P&L' across all book names
+        total_pnl = grouped.groupby('date')['$ Daily P&L'].sum().reset_index()
+
+        # Create a list of unique book names
+        book_names = grouped['Book Name'].unique()
+
+        # Create the figure with two y-axes
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+        # Add total '$ Daily P&L' line
+        fig.add_trace(
+            go.Scatter(x=total_pnl['date'], y=total_pnl['$ Daily P&L'], name='Total $ Daily P&L', 
+                    line=dict(color='black', width=3)),
+            secondary_y=False,
+        )
+
+        # Add individual book name lines
+        for book in book_names:
+            book_data = grouped[grouped['Book Name'] == book]
+            fig.add_trace(
+                go.Scatter(x=book_data['date'], y=book_data['$ Daily P&L'], name=book, 
+                        line=dict(width=1), opacity=0.7),
+                secondary_y=True,
+            )
+
+        # Update layout
+        fig.update_layout(
+            title='Daily P&L: Total and by Book Name',
+            xaxis_title='Date',
+            yaxis_title='Total $ Daily P&L',
+            yaxis2_title='Individual Book $ Daily P&L',
+            legend_title='Book Names',
+            hovermode='x unified'
+        )
+
+        # Update y-axes
+        fig.update_yaxes(title_text="Total $ Daily P&L", secondary_y=False)
+        fig.update_yaxes(title_text="Individual Book $ Daily P&L", secondary_y=True)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # with tab7:
+        # st.write("Historical P&L Analysis")
+
+
+        
+        # Allow user to select date and time from a box
+
 
 
 
