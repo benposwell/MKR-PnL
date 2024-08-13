@@ -6,11 +6,12 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 from datetime import datetime
+import pytz
 
 from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path, extract_currency_pair, generate_file_path, process_24h_data, get_files_from_sharepoint_folder
 
 pio.templates.default = "plotly"
-
+aest = pytz.timezone('Australia/Sydney')
 st.set_page_config(page_title='Position & P/L Report', page_icon=':chart_with_upwards_trend:', layout='wide', initial_sidebar_state='collapsed')
 st.image('images/Original Logo.png')
 # st.title('Position & P/L Report')
@@ -21,8 +22,7 @@ if 'data' not in st.session_state:
   
 # @st.cache_data
 def get_data(selected_date):
-    # Time now in YYYY-MM-DD-HH-MM format
-    current_hour = datetime.now().hour
+    current_hour = datetime.now(aest).hour
     formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-{current_hour:02d}-00"
     st.write(formatted_time)
 
@@ -44,7 +44,11 @@ def get_data(selected_date):
     return df
 
 st.divider()
-selected_date = st.date_input("Select a date", value=pd.to_datetime('today').date())
+if 'selected_date' not in st.session_state:
+    st.session_state.selected_date = pd.to_datetime(datetime.now(aest)).date()
+selected_date = st.date_input("Select a date", value=st.session_state.selected_date, key="overall_date")
+st.session_state.selected_date = selected_date
+
 if st.button("Refresh Data"):
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -58,8 +62,8 @@ if st.session_state.data is None:
     st.warning("Please click 'Refresh Data' to load the data.")
 else:
     data = st.session_state.data
-    current_date = datetime.now().strftime('%m/%d/%Y')
-    current_hour = datetime.now().hour
+    current_date = datetime.now(aest).strftime('%m/%d/%Y')
+    current_hour = datetime.now(aest).hour
 
     st.markdown(f"""
     <div style="text-align: center;">
@@ -324,9 +328,9 @@ else:
     
     with tab6:
         if 'selected_date' not in st.session_state:
-            st.session_state.selected_date = pd.to_datetime('today').date()
+            st.session_state.selected_date = pd.to_datetime(datetime.now(aest)).date()
         if 'selected_time' not in st.session_state:
-            st.session_state.selected_time = datetime.now().time()
+            st.session_state.selected_time = datetime.now(aest).time()
 
         st.write("Intraday P&L Analysis")
         # selected_date = st.date_input("Select a date", value=datetime.date.today()).strftime('%Y-%m-%d')
@@ -334,7 +338,6 @@ else:
         selected_date = st.date_input("Select a date", value=st.session_state.selected_date, key="date_input")
         st.session_state.selected_date = selected_date
 
-        # Time now
         selected_time = st.time_input("Select a time", value=st.session_state.selected_time, key="time_input")
         st.session_state.selected_time = selected_time
 
