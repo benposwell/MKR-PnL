@@ -24,15 +24,13 @@ def get_data(selected_date):
     # Time now in YYYY-MM-DD-HH-MM format
     current_hour = datetime.now().hour
     formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-{current_hour:02d}-00"
+    st.write(formatted_time)
 
     CLIENT_ID = st.secrets["CLIENT_ID"]
     CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
     TENANT_ID = st.secrets["TENANT_ID"]
     SITE_ID = st.secrets["SITE_ID"]
-    FILE_ID = st.secrets["FILE_ID"]
-    SHEET_NAME = st.secrets["SHEET_NAME"]
-    RANGE_ADDRESS = st.secrets["RANGE_ADDRESS"]
-    FILE_PATH = st.secrets["FILE_PATH"]
+    
     FILE_PATH = generate_file_path(formatted_time)
 
     df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)

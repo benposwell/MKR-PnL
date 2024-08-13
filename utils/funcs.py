@@ -36,6 +36,7 @@ def get_csv_from_sharepoint_by_path(client_id, client_secret, tenant_id, site_id
             st.error(f"Error: {response.status_code}, {response.text}")
             return None
     else:
+        st.error(file_path)
         st.error("Failed to acquire token")
         return None
     
