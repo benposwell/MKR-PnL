@@ -24,7 +24,6 @@ if 'data' not in st.session_state:
 def get_data(selected_date):
     current_hour = datetime.now(aest).hour
     formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-{current_hour:02d}-00"
-    st.write(formatted_time)
 
     CLIENT_ID = st.secrets["CLIENT_ID"]
     CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
@@ -82,8 +81,8 @@ else:
         """, unsafe_allow_html=True)
 
     # Create the tabs
-    # tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions", "Intraday P+L", "Historical P+L"])
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions", "Intraday P+L"])
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions", "Intraday P+L", "Historical P+L"])
+    # tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions", "Intraday P+L"])
 
     def create_bar_chart(data, x, y, title, x_title, y_title, hover_data):
         fig = px.bar(data, x=x, y=y,
@@ -394,8 +393,10 @@ else:
         fig.update_yaxes(title_text="Individual Book $ Daily P&L", secondary_y=True)
         st.plotly_chart(fig, use_container_width=True)
     
-    # with tab7:
-        # st.write("Historical P&L Analysis")
+    with tab7:
+        st.write("Historical P&L Analysis")
+        # all_files = get_files_from_sharepoint_folder()
+
 
 
         

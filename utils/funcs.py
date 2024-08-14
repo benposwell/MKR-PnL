@@ -103,7 +103,7 @@ def process_24h_data(input_time):
     end_time = datetime.strptime(input_time, '%Y-%m-%d-%H-%M')
 
     file_names = []
-    for i in range(3):
+    for i in range(19):
         current_time = end_time - timedelta(hours=i)
         current_time = current_time.replace(minute=0, second=0, microsecond=0) 
         file_name = f"/ProfitLoss/data_{current_time.strftime('%Y-%m-%d-%H-%M')}.csv"
