@@ -103,7 +103,7 @@ def process_24h_data(input_time):
     end_time = datetime.strptime(input_time, '%Y-%m-%d-%H-%M')
 
     file_names = []
-    for i in range(19):
+    for i in range(21):
         current_time = end_time - timedelta(hours=i)
         current_time = current_time.replace(minute=0, second=0, microsecond=0) 
         file_name = f"/ProfitLoss/data_{current_time.strftime('%Y-%m-%d-%H-%M')}.csv"
@@ -122,3 +122,31 @@ def process_24h_data(input_time):
             continue
     return combined_df
 
+def get_historical_data():
+    CLIENT_ID = st.secrets["CLIENT_ID"]
+    CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
+    TENANT_ID = st.secrets["TENANT_ID"]
+    SITE_ID = st.secrets["SITE_ID"]
+    
+    files = get_files_from_sharepoint_folder(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, folder_path="/ProfitLoss")
+
+    to_map = []
+    
+        # If f contains 09-00 as the time field
+    pattern = r'data_\d{4}-\d{1,2}-\d{1,2}-09-00'
+
+    to_map = [f for f in files if re.search(pattern, f)]
+
+    # Process each file and combine into one dataframe
+    combined_df = pd.DataFrame()
+    for f_path in to_map:
+        try:
+            f_path = f"/ProfitLoss/{f_path}"
+            df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, f_path)
+            date_str = f_path.split('_')[1].replace('.csv', '')
+            df['date'] = date_str
+            
+            combined_df = pd.concat([combined_df, df], ignore_index=True)
+        except Exception as e:
+            continue
+    return combined_df
