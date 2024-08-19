@@ -396,7 +396,7 @@ else:
                 )
 
             # Update layout
-            fig.update_layout(
+            fig.update_layout( 
                 title='Daily P&L: Total and by Book Name',
                 xaxis_title='Date',
                 yaxis_title='Total $ Daily P&L',
