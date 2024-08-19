@@ -76,6 +76,7 @@ def get_files_from_sharepoint_folder(client_id, client_secret, tenant_id, site_i
 def convert_to_float(value):
     if isinstance(value, str):
         value = value.replace(',', '').replace('$', '').replace('(', '-').replace(')', '')
+        value = value.replace('USD', '')
         try:
             return float(value)
         except ValueError:
