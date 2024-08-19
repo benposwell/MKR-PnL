@@ -123,6 +123,7 @@ def process_24h_data(input_time):
             continue
     return combined_df
 
+
 def get_historical_data():
     CLIENT_ID = st.secrets["CLIENT_ID"]
     CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
