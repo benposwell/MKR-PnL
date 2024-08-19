@@ -27,7 +27,7 @@ if 'historical_data' not in st.session_state:
 # @st.cache_data
 def get_data(selected_date):
     current_hour = datetime.now(aest).hour
-    formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-21-00"
+    formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-06-00"
     # formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-{current_hour:02d}-00"
 
     CLIENT_ID = st.secrets["CLIENT_ID"]
@@ -69,10 +69,16 @@ else:
     current_date = datetime.now(aest).strftime('%m/%d/%Y')
     current_hour = datetime.now(aest).hour
 
+    # st.markdown(f"""
+    # <div style="text-align: center;">
+    #     <h2>MKR Capital Daily Report for {current_date}</h2>
+    #     <p> Last updated at {current_hour:02d}:00<p>
+    # </div>
+    # """, unsafe_allow_html=True)
     st.markdown(f"""
     <div style="text-align: center;">
         <h2>MKR Capital Daily Report for {current_date}</h2>
-        <p> Last updated at {current_hour:02d}:00<p>
+        <p> Last updated at 06:52<p>
     </div>
     """, unsafe_allow_html=True)
 
