@@ -151,7 +151,6 @@ else:
         st.subheader("Long Term Performance")
         st.plotly_chart(fig_ytd, use_container_width=True)
         st.plotly_chart(fig_itd, use_container_width=True)
-        st.divider()
 
     with tab2:
         # Create Book Selector & Filter Data
@@ -210,7 +209,6 @@ else:
             st.dataframe(all_data, use_container_width=True)
 
 
-
     with tab3:
         books = ['USD rates', 'DM Rates', 'Equity trading', 'Short term trading', 'Commodities']
         book = st.multiselect("Select a book", books, key="futures_book")
@@ -234,7 +232,6 @@ else:
         st.plotly_chart(fig2, use_container_width=True)
 
         st.dataframe(futures_data[['Book Name', 'Description', 'Quantity', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ ITD P&L']], use_container_width=True)
-
     with tab4:
         books = ['Cross Market Rates', 'AUD Rates', 'NZD Rates']
         book = st.multiselect("Select a book", books, key="swaps_book")
@@ -272,7 +269,6 @@ else:
         # Display the chart in Streamlit
         st.plotly_chart(fig3, use_container_width=True)
         st.dataframe(swaps_data[['Book Name', 'Description', 'Quantity', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ ITD P&L', 'Par Swap Rate']], use_container_width=True)
-
     with tab5:
         books = ['FX options']
         book = st.multiselect("Select a book", books, key="options_book")
@@ -310,7 +306,6 @@ else:
         # Display the chart in Streamlit
         st.plotly_chart(fig4, use_container_width=True)
         st.dataframe(options_data[['Book Name', 'Description', 'Quantity', '$ Daily P&L', '$ MTD P&L', '$ YTD P&L', '$ ITD P&L']], use_container_width=True)
-    
     with tab6:
         if 'selected_date' not in st.session_state:
             st.session_state.selected_date = pd.to_datetime(datetime.now(aest)).date()
@@ -390,7 +385,7 @@ else:
             fig.update_yaxes(title_text="Total $ Daily P&L", secondary_y=False)
             fig.update_yaxes(title_text="Individual Book $ Daily P&L", secondary_y=True)
             st.plotly_chart(fig, use_container_width=True)
-    
+        
     with tab7:
         st.write("Historical P&L Analysis")
         if st.button("Calculate Historical P&L"):
@@ -514,6 +509,7 @@ else:
             st.plotly_chart(fig2, use_container_width=True)
             st.plotly_chart(fig3, use_container_width=True)
 
+    st.divider()
     st.subheader("Email Generator")
     rec_options = ['bposwell@mkrcapital.com.au', 'arowe@mkrcapital.com.au', 'james.austin@missioncrestcapital.com']
     recipient = st.multiselect("Select a recipient", rec_options)
