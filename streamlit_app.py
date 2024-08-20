@@ -212,7 +212,7 @@ else:
 
 
     with tab3:
-        books = ['USD rates', 'DM Rates', 'Equity trading']
+        books = ['USD rates', 'DM Rates', 'Equity trading', 'Short term trading', 'Commodities']
         book = st.multiselect("Select a book", books, key="futures_book")
 
         futures_data = data[data["Book Name"].isin(book)]
