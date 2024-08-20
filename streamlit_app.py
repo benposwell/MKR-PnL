@@ -9,6 +9,7 @@ from datetime import datetime
 import pytz
 
 from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path, extract_currency_pair, generate_file_path, process_24h_data, get_historical_data, get_data
+from utils.emailer import send_email
 
 pio.templates.default = "plotly"
 aest = pytz.timezone('Australia/Sydney')
@@ -25,29 +26,6 @@ if 'combined_df' not in st.session_state:
 if 'historical_data' not in st.session_state:
     st.session_state.historical_data = None
   
-# @st.cache_data
-# def get_data(selected_date):
-#     current_hour = datetime.now(aest).hour
-#     formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-12-00"
-#     # formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-{current_hour:02d}-00"
-
-#     CLIENT_ID = st.secrets["CLIENT_ID"]
-#     CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
-#     TENANT_ID = st.secrets["TENANT_ID"]
-#     SITE_ID = st.secrets["SITE_ID"]
-    
-#     FILE_PATH = generate_file_path(formatted_time)
-
-#     df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)
-    
-#     exclude_columns = ['Book Name', 'Holding Scenario', 'Description', 'Active']
-
-#     for column in df.columns:
-#         if column not in exclude_columns:
-#             df[column] = df[column].apply(convert_to_float)
-
-#     return df
-
 st.divider()
 if 'selected_date' not in st.session_state:
     st.session_state.selected_date = pd.to_datetime(datetime.now(aest)).date()
@@ -536,8 +514,21 @@ else:
             st.plotly_chart(fig2, use_container_width=True)
             st.plotly_chart(fig3, use_container_width=True)
 
+    st.subheader("Email Generator")
+    rec_options = ['bposwell@mkrcapital.com.au', 'arowe@mkrcapital.com.au', 'james.austin@missioncrestcapital.com']
+    recipient = st.multiselect("Select a recipient", rec_options)
+    interval_options = ['Daily', 'WTD', 'MTD', 'YTD', 'ITD']
+    interval = st.selectbox("Select an interval", interval_options)
 
-
+    if st.button("Send Email"):
+        # Progres bar
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        send_email(interval, recipient, data)
+        status_text.text("Email Sent!")
+        progress_bar.progress(100)
+    st.divider()
+    
 
 
 
