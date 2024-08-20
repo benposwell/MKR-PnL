@@ -8,7 +8,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime
 import pytz
 
-from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path, extract_currency_pair, generate_file_path, process_24h_data, get_historical_data
+from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path, extract_currency_pair, generate_file_path, process_24h_data, get_historical_data, get_data
 
 pio.templates.default = "plotly"
 aest = pytz.timezone('Australia/Sydney')
@@ -19,33 +19,34 @@ st.image('images/Original Logo.png')
 
 if 'data' not in st.session_state:
     st.session_state.data = None  
+    st.session_state.update_time = None
 if 'combined_df' not in st.session_state:
     st.session_state.combined_df = None  
 if 'historical_data' not in st.session_state:
     st.session_state.historical_data = None
   
 # @st.cache_data
-def get_data(selected_date):
-    current_hour = datetime.now(aest).hour
-    formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-12-00"
-    # formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-{current_hour:02d}-00"
+# def get_data(selected_date):
+#     current_hour = datetime.now(aest).hour
+#     formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-12-00"
+#     # formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-{current_hour:02d}-00"
 
-    CLIENT_ID = st.secrets["CLIENT_ID"]
-    CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
-    TENANT_ID = st.secrets["TENANT_ID"]
-    SITE_ID = st.secrets["SITE_ID"]
+#     CLIENT_ID = st.secrets["CLIENT_ID"]
+#     CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
+#     TENANT_ID = st.secrets["TENANT_ID"]
+#     SITE_ID = st.secrets["SITE_ID"]
     
-    FILE_PATH = generate_file_path(formatted_time)
+#     FILE_PATH = generate_file_path(formatted_time)
 
-    df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)
+#     df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)
     
-    exclude_columns = ['Book Name', 'Holding Scenario', 'Description', 'Active']
+#     exclude_columns = ['Book Name', 'Holding Scenario', 'Description', 'Active']
 
-    for column in df.columns:
-        if column not in exclude_columns:
-            df[column] = df[column].apply(convert_to_float)
+#     for column in df.columns:
+#         if column not in exclude_columns:
+#             df[column] = df[column].apply(convert_to_float)
 
-    return df
+#     return df
 
 st.divider()
 if 'selected_date' not in st.session_state:
@@ -57,7 +58,7 @@ if st.button("Refresh Data"):
     progress_bar = st.progress(0)
     status_text = st.empty()
     status_text.text("Loading data...")
-    st.session_state.data = get_data(selected_date)
+    st.session_state.update_time, st.session_state.data = get_data(selected_date)
     progress_bar.progress(100)
     status_text.text("Data Loaded!")
 st.divider()    
@@ -69,18 +70,13 @@ else:
     current_date = datetime.now(aest).strftime('%m/%d/%Y')
     current_hour = datetime.now(aest).hour
 
-    # st.markdown(f"""
-    # <div style="text-align: center;">
-    #     <h2>MKR Capital Daily Report for {current_date}</h2>
-    #     <p> Last updated at {current_hour:02d}:00<p>
-    # </div>
-    # """, unsafe_allow_html=True)
     st.markdown(f"""
     <div style="text-align: center;">
         <h2>MKR Capital Daily Report for {current_date}</h2>
-        <p> Last updated at 06:52<p>
+        <p> Last updated at {st.session_state.update_time}<p>
     </div>
     """, unsafe_allow_html=True)
+
 
 # Center the tabs using CSS
     st.markdown("""

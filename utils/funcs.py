@@ -6,6 +6,8 @@ from io import StringIO
 import re
 import plotly.express as px
 from datetime import datetime, timedelta
+import pytz
+
 
 def get_csv_from_sharepoint_by_path(client_id, client_secret, tenant_id, site_id, file_path):
     graph_url = "https://graph.microsoft.com/v1.0"
@@ -152,3 +154,42 @@ def get_historical_data():
         except Exception as e:
             continue
     return combined_df
+
+def extract_datetime(file_name):
+    match = re.search(r'data_(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})', file_name)
+    if match:
+        return datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M')
+    return datetime.min
+
+def get_data(selected_date):
+    CLIENT_ID = st.secrets["CLIENT_ID"]
+    CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
+    TENANT_ID = st.secrets["TENANT_ID"]
+    SITE_ID = st.secrets["SITE_ID"]
+    aest = pytz.timezone('Australia/Sydney')
+    current_hour = datetime.now(aest).hour
+
+    all_files = get_files_from_sharepoint_folder(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, folder_path="/ProfitLoss")
+
+    most_recent_file = max(all_files, key=extract_datetime)
+    most_recent_time = extract_datetime(most_recent_file)
+    # max_date = max([datetime.strptime(f.split('_')[1].replace('.csv', ''), '%Y-%m-%d-%H-%M') for f in all_files])
+    # st.write(max_date)
+    # formatted_time = max_date
+    # formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-12-00"
+    # formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-{current_hour:02d}-00"
+
+   
+    
+    # FILE_PATH = generate_file_path(formatted_time)
+    FILE_PATH = f"/ProfitLoss/{most_recent_file}"
+
+    df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)
+    
+    exclude_columns = ['Book Name', 'Holding Scenario', 'Description', 'Active']
+
+    for column in df.columns:
+        if column not in exclude_columns:
+            df[column] = df[column].apply(convert_to_float)
+
+    return most_recent_time, df
