@@ -32,10 +32,14 @@ def get_csv_from_sharepoint_by_path(client_id, client_secret, tenant_id, site_id
         if response.status_code == 200:
             csv_content = StringIO(response.text)
             df = pd.read_csv(csv_content)
-        
+
+            exclude_columns = ['Book Name', 'Holding Scenario', 'Description', 'Active']
+
+            for column in df.columns:
+                if column not in exclude_columns:
+                    df[column] = df[column].apply(convert_to_float)
             return df
         else:
-            st.error(f"Error: {response.status_code}, {response.text}")
             return None
     else:
         st.error(file_path)
@@ -117,10 +121,10 @@ def process_24h_data(input_time):
     for file_name in file_names:
         try:
             df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, file_name)
-            date_str = file_name.split('_')[1].replace('.csv', '')
-            df['date'] = date_str
-
-            combined_df = pd.concat ([combined_df, df], ignore_index=True)
+            if df is not None and not df.empty:
+                date_str = file_name.split('_')[1].replace('.csv', '')
+                df['date'] = date_str
+                combined_df = pd.concat ([combined_df, df], ignore_index=True)
         except Exception as e:
             continue
     return combined_df
@@ -186,10 +190,4 @@ def get_data(selected_date):
 
     df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)
     
-    exclude_columns = ['Book Name', 'Holding Scenario', 'Description', 'Active']
-
-    for column in df.columns:
-        if column not in exclude_columns:
-            df[column] = df[column].apply(convert_to_float)
-
     return most_recent_time, df
