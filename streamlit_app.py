@@ -8,7 +8,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime
 import pytz
 
-from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path, extract_currency_pair, generate_file_path, process_24h_data, get_historical_data, get_data
+from utils.funcs import convert_to_float, get_csv_from_sharepoint_by_path, extract_currency_pair, generate_file_path, process_24h_data, get_historical_data, get_data, create_heatmap, create_dv01_bar_chart
 from utils.emailer import send_email
 
 pio.templates.default = "plotly"
@@ -21,6 +21,9 @@ st.image('images/Original Logo.png')
 if 'data' not in st.session_state:
     st.session_state.data = None  
     st.session_state.update_time = None
+    st.session_state.curr_exp_data = None
+    st.session_state.dv01_data = None
+    st.session_state.cvar_data = None
 if 'combined_df' not in st.session_state:
     st.session_state.combined_df = None  
 if 'historical_data' not in st.session_state:
@@ -36,7 +39,7 @@ if st.button("Refresh Data"):
     progress_bar = st.progress(0)
     status_text = st.empty()
     status_text.text("Loading data...")
-    st.session_state.update_time, st.session_state.data = get_data(selected_date)
+    st.session_state.update_time, st.session_state.data, st.session_state.curr_exp_data, st.session_state.dv01_data, st.session_state.cvar_data  = get_data(selected_date)
     progress_bar.progress(100)
     status_text.text("Data Loaded!")
 st.divider()    
@@ -45,9 +48,13 @@ if st.session_state.data is None:
     st.warning("Please click 'Refresh Data' to load the data.")
 else:
     data = st.session_state.data
+    curr_exp_data = st.session_state.curr_exp_data
+    dv01_data = st.session_state.dv01_data
+    dv01_data = dv01_data.set_index('Currency')
+    cvar_data = st.session_state.cvar_data
     current_date = datetime.now(aest).strftime('%m/%d/%Y')
     current_hour = datetime.now(aest).hour
-
+ 
     st.markdown(f"""
     <div style="text-align: center;">
         <h2>MKR Capital Daily Report for {current_date}</h2>
@@ -66,8 +73,7 @@ else:
         """, unsafe_allow_html=True)
 
     # Create the tabs
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions", "Intraday P+L", "Historical P+L"])
-    # tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions", "Intraday P+L"])
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["P+L Report", "FX Positions", "Futures Positions", "Swaps Positions", "Options Positions", "Intraday P+L", "Historical P+L", "Risk + Exposure"])
 
     def create_bar_chart(data, x, y, title, x_title, y_title, hover_data):
         fig = px.bar(data, x=x, y=y,
@@ -117,6 +123,14 @@ else:
         fig_total.update_layout(xaxis_title="Book Name", yaxis_title="Total Daily P&L (USD)", hovermode="closest")
 
         st.plotly_chart(fig_total, use_container_width=True)
+        
+        dv01_total_for_print = dv01_data.drop(columns=['Description', 'Date']).groupby('Currency').sum().sum(axis=1)[:-1]['Grand Total']
+        st.write(f"Total DV01: ${str(round(dv01_total_for_print, 2))}")
+        st.write(f"Total CVaR: ${round(cvar_data.iloc[-1]['Daily Fund CVaR'],2)}")
+        st.write(f"Total USD Exposure: ${round(curr_exp_data[curr_exp_data['Currency']=='USD']['Book NMV (Total)'].values[0],2)}")
+
+
+        st.divider()
         st.plotly_chart(fig, use_container_width=True)
 
         # Show Raw Data
@@ -509,18 +523,53 @@ else:
             st.plotly_chart(fig2, use_container_width=True)
             st.plotly_chart(fig3, use_container_width=True)
 
+        with tab8:
+            st.markdown("**DV01 Risk**")
+            view_option = st.selectbox("Select a View Option", ["By Currency", "By Bucket"], key="DV01_view_option")
+            
+            # Remove first row
+            if view_option == "By Currency":
+                # dv01_data = dv01_data.set_index('Currency')
+                fig = create_heatmap(dv01_data.drop(columns=['Description', 'Date']), "DV01 Heatmap by Currency and Bucket")
+                st.plotly_chart(fig)
+
+                if st.checkbox("Show Raw Data"):
+                    st.write("Raw Data")
+                    st.dataframe(dv01_data, use_container_width=True)
+            if view_option == "By Bucket":
+                total_dv01 = dv01_data.sum()
+                fig = create_dv01_bar_chart(total_dv01, "Total Dv01 Risk by Bucket", "Bucket", "Total DV01")
+                st.plotly_chart(fig)
+                
+                if st.checkbox("Show Raw Data", key='dv01'):
+                    st.write("Raw Data")
+                    st.dataframe(total_dv01)
+            st.divider()
+            st.markdown("**CVaR Risk**")
+            st.write(f"Total CVaR: ${round(cvar_data.iloc[-1]['Daily Fund CVaR'],2)}")
+            if st.checkbox("Show Raw Data", key='cvar'):
+                st.write("Raw Data")
+                st.dataframe(cvar_data, use_container_width=True)
+
+            st.divider()
+            st.markdown("**Currency Exposure**")
+            if st.checkbox("Show Raw Data", key='curr_exp_raw_data'):
+                st.write("Raw Data")
+                st.dataframe(curr_exp_data, use_container_width=True)
+
     st.divider()
     st.subheader("Email Generator")
     rec_options = ['bposwell@mkrcapital.com.au', 'arowe@mkrcapital.com.au', 'james.austin@missioncrestcapital.com']
     recipient = st.multiselect("Select a recipient", rec_options)
     interval_options = ['Daily', 'WTD', 'MTD', 'YTD', 'ITD']
     interval = st.selectbox("Select an interval", interval_options)
+        
 
     if st.button("Send Email"):
         # Progres bar
         progress_bar = st.progress(0)
         status_text = st.empty()
-        send_email(interval, recipient, data)
+        send_email(interval, recipient, data, dv01_data, cvar_data, curr_exp_data)
         status_text.text("Email Sent!")
         progress_bar.progress(100)
     st.divider()

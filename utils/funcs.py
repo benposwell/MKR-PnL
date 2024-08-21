@@ -31,13 +31,18 @@ def get_csv_from_sharepoint_by_path(client_id, client_secret, tenant_id, site_id
         
         if response.status_code == 200:
             csv_content = StringIO(response.text)
-            df = pd.read_csv(csv_content)
+            if 'DV0' in file_path:
+                df = pd.read_csv(csv_content, header=[1])
+            elif 'Cur' in file_path:
+                df = pd.read_csv(csv_content)
+            else:
+                df = pd.read_csv(csv_content)
 
-            exclude_columns = ['Book Name', 'Holding Scenario', 'Description', 'Active']
+                exclude_columns = ['Book Name', 'Holding Scenario', 'Description', 'Active']
 
-            for column in df.columns:
-                if column not in exclude_columns:
-                    df[column] = df[column].apply(convert_to_float)
+                for column in df.columns:
+                    if column not in exclude_columns:
+                        df[column] = df[column].apply(convert_to_float)
             return df
         else:
             return None
@@ -165,6 +170,28 @@ def extract_datetime(file_name):
         return datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M')
     return datetime.min
 
+
+def create_heatmap(data, title):
+    data = data.groupby('Currency').sum()
+    data['Total DV01'] = data.sum(axis=1)
+    fig = px.imshow(data, 
+                    labels=dict(x="Bucket", y="Currency", color="DV01"),
+                    x=data.columns, 
+                    y=data.index,
+                    color_continuous_scale="RdBu_r",
+                    title=title)
+    fig.update_layout(height=600, width=1000)
+    return fig
+
+def create_dv01_bar_chart(data, title, x_title, y_title):
+    fig = px.bar(data, 
+                 x=data.index, 
+                 y=data.values, 
+                 title=title,
+                 labels={"x": x_title, "y": y_title})
+    fig.update_layout(height=600)
+    return fig
+
 def get_data(selected_date):
     CLIENT_ID = st.secrets["CLIENT_ID"]
     CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
@@ -180,7 +207,7 @@ def get_data(selected_date):
     # max_date = max([datetime.strptime(f.split('_')[1].replace('.csv', ''), '%Y-%m-%d-%H-%M') for f in all_files])
     # st.write(max_date)
     # formatted_time = max_date
-    # formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-12-00"
+    formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-08-00"
     # formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-{current_hour:02d}-00"
 
    
@@ -189,5 +216,9 @@ def get_data(selected_date):
     FILE_PATH = f"/ProfitLoss/{most_recent_file}"
 
     df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)
+
+    curr_exposure_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, f'/ProfitLoss/data_Cur{formatted_time}.csv')
+    dv01_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, f'/ProfitLoss/data_DV0{formatted_time}.csv')
+    cvar_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, f'/ProfitLoss/data_VaR{formatted_time}.csv')
     
-    return most_recent_time, df
+    return most_recent_time, df, curr_exposure_df, dv01_df, cvar_df

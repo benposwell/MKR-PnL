@@ -18,7 +18,7 @@ from datetime import datetime
 import uuid
 
 
-def send_email(interval, recipients, data):
+def send_email(interval, recipients, data, dv01_data, cvar_data, curr_exp_data):
     def convert_to_float(value):
         if isinstance(value, str):
             value = value.replace(',', '').replace('$', '').replace('(', '-').replace(')', '')
@@ -315,11 +315,16 @@ def send_email(interval, recipients, data):
         # Send email with charts
     
     subject = f"P&L Update - {date_str}"
+    dv01_total = str(round(dv01_data.drop(columns=['Description', 'Date']).groupby('Currency').sum().sum(axis=1)[:-1]['Grand Total'], 2))
+    cvar_total = str(round(cvar_data.iloc[-1]['Daily Fund CVaR'],2))
+    total_USD = str(round(curr_exp_data[curr_exp_data['Currency']=='USD']['Book NMV (Total)'].values[0],2))
+
 
     body_content = f"""
     <body>
         <p>Hi All,</p>
         <p>Please find the {interval} P&L update below.</p>
+        <p>Total DV01 is {dv01_total}, Total CVaR is {cvar_total} and Total USD Exposure is {total_USD}.</p>
         <p>To access this report online, please <a href="https://mkrcapital.streamlit.app/">click here</a>.</p>
         <p>Thanks.</p>
     </body>
