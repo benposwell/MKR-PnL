@@ -125,9 +125,9 @@ else:
         st.plotly_chart(fig_total, use_container_width=True)
         
         dv01_total_for_print = dv01_data.drop(columns=['Description', 'Date']).groupby('Currency').sum().sum(axis=1)[:-1]['Grand Total']
-        st.write(f"Total DV01: ${str(round(dv01_total_for_print, 2))}")
-        st.write(f"Total CVaR: ${round(cvar_data.iloc[-1]['Daily Fund CVaR'],2)}")
-        st.write(f"Total USD Exposure: ${round(curr_exp_data[curr_exp_data['Currency']=='USD']['Book NMV (Total)'].values[0],2)}")
+        st.write(f"Total DV01: ${dv01_total_for_print:,.2f}")
+        st.write(f"Total CVaR: ${cvar_data.iloc[-1]['Daily Fund CVaR']:,.2f}")
+        st.write(f"Total USD Exposure: ${curr_exp_data[curr_exp_data['Currency']=='USD']['Book NMV (Total)'].values[0]:,.2f}")
 
 
         st.divider()
@@ -546,7 +546,7 @@ else:
                     st.dataframe(total_dv01)
             st.divider()
             st.markdown("**CVaR Risk**")
-            st.write(f"Total CVaR: ${round(cvar_data.iloc[-1]['Daily Fund CVaR'],2)}")
+            st.write(f"Total CVaR: ${cvar_data.iloc[-1]['Daily Fund CVaR']:,.2f}")
             if st.checkbox("Show Raw Data", key='cvar'):
                 st.write("Raw Data")
                 st.dataframe(cvar_data, use_container_width=True)
