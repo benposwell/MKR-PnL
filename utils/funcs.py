@@ -164,12 +164,45 @@ def get_historical_data():
             continue
     return combined_df
 
-def extract_datetime(file_name):
-    match = re.search(r'data_(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})', file_name)
+# def extract_datetime(file_name, name=''):
+#     match = re.search(r'data_(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})', file_name)
+#     if match:
+#         return datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M')
+#     return datetime.min
+
+# def extract_curr(file_name, name=''):
+#     match = re.search(r'data_Cur(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})', file_name)
+#     if match:
+#         return datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M')
+#     return datetime.min
+
+# def extract_dv01(file_name, name=''):
+#     match = re.search(r'data_DV0(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})', file_name)
+#     if match:
+#         return datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M')
+#     return datetime.min
+
+# def extract_cvar(file_name, name=''):
+#     match = re.search(r'data_VaR(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})', file_name)
+#     if match:
+#         return datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M')
+#     return datetime.min
+
+def extract_datetime(file_name, data_type=''):
+    pattern_mapping = {
+        '': r'data_(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})',
+        'Cur': r'data_Cur(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})',
+        'DV0': r'data_DV0(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})',
+        'VaR': r'data_VaR(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})'
+    }
+    
+    pattern = pattern_mapping.get(data_type)
+    match = re.search(pattern, file_name)
+    
     if match:
         return datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M')
+    
     return datetime.min
-
 
 def create_heatmap(data, title):
     data = data.groupby('Currency').sum()
@@ -202,8 +235,12 @@ def get_data(selected_date):
 
     all_files = get_files_from_sharepoint_folder(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, folder_path="/ProfitLoss")
 
-    most_recent_file = max(all_files, key=extract_datetime)
+    most_recent_file = max(all_files, key=lambda file: extract_datetime(file, data_type=''))
     most_recent_time = extract_datetime(most_recent_file)
+
+    most_recent_curr = max(all_files, key=lambda file: extract_datetime(file, data_type='Cur'))
+    most_recent_dv01 = max(all_files, key=lambda file: extract_datetime(file, data_type='DV0'))
+    most_recent_cvar = max(all_files, key=lambda file: extract_datetime(file, data_type='VaR'))
     # max_date = max([datetime.strptime(f.split('_')[1].replace('.csv', ''), '%Y-%m-%d-%H-%M') for f in all_files])
     # st.write(max_date)
     # formatted_time = max_date
@@ -217,8 +254,8 @@ def get_data(selected_date):
 
     df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, FILE_PATH)
 
-    curr_exposure_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, f'/ProfitLoss/data_Cur{formatted_time}.csv')
-    dv01_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, f'/ProfitLoss/data_DV0{formatted_time}.csv')
-    cvar_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, f'/ProfitLoss/data_VaR{formatted_time}.csv')
+    curr_exposure_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, f'/ProfitLoss/{most_recent_curr}')
+    dv01_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, f'/ProfitLoss/{most_recent_dv01}')
+    cvar_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, f'/ProfitLoss/{most_recent_cvar}')
     
     return most_recent_time, df, curr_exposure_df, dv01_df, cvar_df
