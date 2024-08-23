@@ -51,37 +51,67 @@ def get_csv_from_sharepoint_by_path(client_id, client_secret, tenant_id, site_id
         st.error("Failed to acquire token")
         return None
     
+# def get_files_from_sharepoint_folder(client_id, client_secret, tenant_id, site_id, folder_path):
+#     graph_url = "https://graph.microsoft.com/v1.0"
+    
+#     app = ConfidentialClientApplication(
+#         client_id,
+#         authority=f"https://login.microsoftonline.com/{tenant_id}",
+#         client_credential=client_secret
+#     )
+    
+#     result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
+#     if "access_token" in result:
+#         # Construct the API URL to list files in the folder
+#         api_url = f"{graph_url}/sites/{site_id}/drive/root:{folder_path}:/children"
+        
+#         headers = {
+#             'Authorization': 'Bearer ' + result['access_token']
+#         }
+
+#         response = requests.get(api_url, headers=headers)
+        
+#         if response.status_code == 200:
+#             files_data = response.json().get('value', [])
+#             file_list = [file['name'] for file in files_data if file.get('file')]
+#             return file_list
+#         else:
+#             print(f"Error: {response.status_code}, {response.text}")
+#             return None
+#     else:
+#         print("Failed to acquire token")
+#         return None
 def get_files_from_sharepoint_folder(client_id, client_secret, tenant_id, site_id, folder_path):
     graph_url = "https://graph.microsoft.com/v1.0"
-    
+
     app = ConfidentialClientApplication(
         client_id,
         authority=f"https://login.microsoftonline.com/{tenant_id}",
         client_credential=client_secret
     )
-    
+
     result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
     if "access_token" in result:
-        # Construct the API URL to list files in the folder
         api_url = f"{graph_url}/sites/{site_id}/drive/root:{folder_path}:/children"
-        
         headers = {
             'Authorization': 'Bearer ' + result['access_token']
         }
 
-        response = requests.get(api_url, headers=headers)
-        
-        if response.status_code == 200:
-            files_data = response.json().get('value', [])
-            file_list = [file['name'] for file in files_data if file.get('file')]
-            return file_list
-        else:
-            print(f"Error: {response.status_code}, {response.text}")
-            return None
+        file_list = []
+        while api_url:
+            response = requests.get(api_url, headers=headers)
+            if response.status_code == 200:
+                files_data = response.json()
+                file_list.extend([file['name'] for file in files_data.get('value', []) if file.get('file')])
+                api_url = files_data.get('@odata.nextLink', None)  # Get the next page URL if it exists
+            else:
+                print(f"Error: {response.status_code}, {response.text}")
+                return None
+
+        return file_list
     else:
         print("Failed to acquire token")
         return None
-
 
     
 def convert_to_float(value):
@@ -195,13 +225,13 @@ def extract_datetime(file_name, data_type=''):
         'DV0': r'data_DV0(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})',
         'VaR': r'data_VaR(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})'
     }
-    
+
     pattern = pattern_mapping.get(data_type)
     match = re.search(pattern, file_name)
-    
+
     if match:
         return datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M')
-    
+
     return datetime.min
 
 def create_heatmap(data, title):
