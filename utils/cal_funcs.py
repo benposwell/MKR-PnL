@@ -107,7 +107,6 @@ def generate_batch_prompt(events: pd.DataFrame) -> str:
     
     prompt = "Using the reports we have stored from our preferred analysts, please could you provide a brief analysis for the following upcoming economic events. For each event, consider its potential impact on the market, what traders should watch for, and how it might affect the relevant currency exchange rate. If you do not have any relevant information on the particular event, please write 'No Information Available'.\n\n"
     
-    
     for _, event in events.iterrows():
         prompt += f"- {event['EVENT_NAME']} ({event['COUNTRY_NAME']}, Impact: {event['RELEVANCY']}, Time: {event['RELEASE_DATE_TIME']})\n"
         curr = country_curr_dict[event['COUNTRY_NAME']]
@@ -179,22 +178,40 @@ def generate_day_ahead_preview(cal_events, assistant):
                 print(type(event['SURVEY_MEDIAN']))
                 print((event['SURVEY_MEDIAN']))
                 report.write(f"<p class='event-details'>Time: {event['RELEASE_DATE_TIME']} | Impact: {event['RELEVANCY']} | Prior: {event['PRIOR'] if not math.isnan(event['PRIOR']) else 'No Prior'} | Frequency: {event['RELEASE_FREQ']} | BBG Median: {event['SURVEY_MEDIAN'] if not math.isnan(event['SURVEY_MEDIAN']) else 'No Survey'} | BBG STD: {round(event['SURVEY_STANDARD_DEVIATION'], 2) if not math.isnan(event['SURVEY_STANDARD_DEVIATION']) else 'No Survey'} </p>")
-                
+                event_analysis = rag_response
                 # Extract the relevant part of the analysis for this event
-                event_analysis = rag_response.split(event['EVENT_NAME'])[1].split("###")[0] if event['EVENT_NAME'] in rag_response else "Analysis not available."
+                # event_analysis = rag_response.split(event['EVENT_NAME'])[1].split("###")[0] if event['EVENT_NAME'] in rag_response else "Analysis not available."
+                # print(rag_response)
+                # # event_analysis = next((analysis for analysis in rag_response.split('-') if event['EVENT_NAME'] in analysis), "Analysis not available.")
+                # if rag_response.strip():
+                #     # Extract the relevant part of the analysis for this event
+                #     event_header = f"### {event['EVENT_NAME']}"
+                #     next_event_header = "### "
+                #     start_index = rag_response.find(event_header)
+                #     end_index = rag_response.find(next_event_header, start_index + len(event_header))
+                    
+                #     if start_index != -1:
+                #         if end_index != -1:
+                #             event_analysis = rag_response[start_index:end_index].strip()
+                #         else:
+                #             event_analysis = rag_response[start_index:].strip()
+                #     else:
+                #         event_analysis = "Analysis not available for this event."
+                # else:
+                #     event_analysis = "No analysis available due to empty response."
                 
                 report.write("<div class='analysis'>")
-                report.write(f"<p>{event_analysis.strip()}</p>")
+                report.write(f"<p>{event_analysis}</p>")
+                # report.write(f"<p>{event_analysis.strip()}</p>")
                 report.write("</div>")
                 report.write("</div>")
+            break
 
     return report.getvalue()
 
 
-
 def store_report(report_html):
     client = get_mongo_access()
-    # client = MongoClient(st.secrets["MONGO_URI"])
     db = client[st.secrets["MONGO_DB_NAME"]]
     reports_collection = db["DocumentStore.reports"]
     
@@ -207,7 +224,6 @@ def store_report(report_html):
 
 def get_report():
     client = get_mongo_access()
-    # client = MongoClient(st.secrets["MONGO_URI"])
     db = client[st.secrets["MONGO_DB_NAME"]]
     reports_collection = db["DocumentStore.reports"]
     
