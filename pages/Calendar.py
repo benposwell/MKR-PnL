@@ -87,7 +87,6 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 
-
 cal_events = pd.read_csv("data/bbg_sample_cal.csv")
 cal_events['ID'] = cal_events['ID'].str.replace('Country', '')
 cal_events['RELEASE_DATE_TIME'] = pd.to_datetime(cal_events['RELEASE_DATE_TIME'])
@@ -118,11 +117,8 @@ with col2:
         ]
         with st.spinner("Generating report..."):
             report_html = generate_day_ahead_preview(filtered_df, assistant)
-        
-        st.session_state.report_html = report_html
-        store_report(st.session_state.report_html)
-        
-        # st.html(st.session_state.report_html)
+            st.session_state.report_html = report_html
+            store_report(st.session_state.report_html)
         
 with col1:
     if st.button("Auto Generate Report", use_container_width=True):
@@ -137,18 +133,13 @@ with col1:
         ]
         with st.spinner("Generating report..."):
             report_html = generate_day_ahead_preview(filtered_df, assistant)
-
-        st.session_state.report_html = report_html
-        store_report(st.session_state.report_html)
-
-
-if st.session_state.report_html is not None:
-    st.html(st.session_state.report_html)
-
+            st.session_state.report_html = report_html
+            store_report(st.session_state.report_html)
 
 st.divider()
 if st.session_state.report_html is None:
     st.session_state.report_html = get_report()
+
 
 if st.session_state.report_html is not None:
     st.success("Report has already been generated.")
