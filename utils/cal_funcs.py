@@ -205,7 +205,6 @@ def generate_day_ahead_preview(cal_events, assistant):
                 # report.write(f"<p>{event_analysis.strip()}</p>")
                 report.write("</div>")
                 report.write("</div>")
-            break
 
     return report.getvalue()
 
