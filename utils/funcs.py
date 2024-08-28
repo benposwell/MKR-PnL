@@ -8,6 +8,8 @@ import plotly.express as px
 from datetime import datetime, timedelta
 import pytz
 
+aest = pytz.timezone('Australia/Sydney')
+
 
 def get_csv_from_sharepoint_by_path(client_id, client_secret, tenant_id, site_id, file_path):
     graph_url = "https://graph.microsoft.com/v1.0"
@@ -194,30 +196,6 @@ def get_historical_data():
             continue
     return combined_df
 
-# def extract_datetime(file_name, name=''):
-#     match = re.search(r'data_(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})', file_name)
-#     if match:
-#         return datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M')
-#     return datetime.min
-
-# def extract_curr(file_name, name=''):
-#     match = re.search(r'data_Cur(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})', file_name)
-#     if match:
-#         return datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M')
-#     return datetime.min
-
-# def extract_dv01(file_name, name=''):
-#     match = re.search(r'data_DV0(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})', file_name)
-#     if match:
-#         return datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M')
-#     return datetime.min
-
-# def extract_cvar(file_name, name=''):
-#     match = re.search(r'data_VaR(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})', file_name)
-#     if match:
-#         return datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M')
-#     return datetime.min
-
 def extract_datetime(file_name, data_type=''):
     pattern_mapping = {
         '': r'data_(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})',
@@ -241,7 +219,7 @@ def create_heatmap(data, title):
                     labels=dict(x="Bucket", y="Currency", color="DV01"),
                     x=data.columns, 
                     y=data.index,
-                    color_continuous_scale="RdBu_r",
+                    color_continuous_scale="RdYlGn_r",
                     title=title)
     fig.update_layout(height=600, width=1000)
     return fig
@@ -255,12 +233,31 @@ def create_dv01_bar_chart(data, title, x_title, y_title):
     fig.update_layout(height=600)
     return fig
 
-def get_data(selected_date):
+def get_data(selected_date = None):
     CLIENT_ID = st.secrets["CLIENT_ID"]
     CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
     TENANT_ID = st.secrets["TENANT_ID"]
     SITE_ID = st.secrets["SITE_ID"]
     aest = pytz.timezone('Australia/Sydney')
+
+    if selected_date:
+        print("Entered given date field")
+        data_path = f"/ProfitLoss/data_{selected_date}.csv"
+        print(data_path)
+        # Set risk date to selected date but make the hour 08
+        risk_date = datetime.strptime(selected_date, "%Y-%m-%d-%H-%M").replace(hour=8).strftime("%Y-%m-%d-%H-%M")
+        print(risk_date)
+        curr_exp_path = f"/ProfitLoss/data_Cur{risk_date}.csv"
+        dv01_path = f"/ProfitLoss/data_DV0{risk_date}.csv"
+        cvar_path = f"/ProfitLoss/data_VaR{risk_date}.csv"
+
+        df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, data_path)
+        curr_exp_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, curr_exp_path)
+        dv01_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, dv01_path)
+        cvar_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, cvar_path)
+
+        return selected_date, df, curr_exp_df, dv01_df, cvar_df
+
     current_hour = datetime.now(aest).hour
 
     all_files = get_files_from_sharepoint_folder(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, folder_path="/ProfitLoss")
@@ -274,7 +271,7 @@ def get_data(selected_date):
     # max_date = max([datetime.strptime(f.split('_')[1].replace('.csv', ''), '%Y-%m-%d-%H-%M') for f in all_files])
     # st.write(max_date)
     # formatted_time = max_date
-    formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-08-00"
+    # formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-08-00"
     # formatted_time = f"{selected_date.strftime('%Y-%m-%d')}-{current_hour:02d}-00"
 
    
