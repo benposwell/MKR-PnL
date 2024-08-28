@@ -168,9 +168,9 @@ def generate_day_ahead_preview(cal_events, assistant):
             # Process with RAG assistant
             chat_context = [Message(content=prompt, role="user")]
             rag_response = ""
-            # for response in assistant.chat_completions(messages=chat_context, stream=True):
-            #     if response.choices[0].delta.content is not None:
-            #         rag_response += response.choices[0].delta.content
+            for response in assistant.chat_completions(messages=chat_context, stream=True):
+                if response.choices[0].delta.content is not None:
+                    rag_response += response.choices[0].delta.content
             
             # Display results for each event in the batch
             for event in batch_events:

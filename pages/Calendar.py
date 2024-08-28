@@ -118,10 +118,10 @@ with col2:
         ]
         with st.spinner("Generating report..."):
             report_html = generate_day_ahead_preview(filtered_df, assistant)
-        st.session_state.report_html = report_html
+        # st.session_state.report_html = report_html
         
-        st.html(st.session_state.report_html)
-        store_report(st.session_state.report_html)
+        # st.html(st.session_state.report_html)
+        # store_report(st.session_state.report_html)
 with col1:
     if st.button("Auto Generate Report", use_container_width=True):
         curr_exp_data = st.session_state.curr_exp_data
@@ -135,10 +135,10 @@ with col1:
         ]
         with st.spinner("Generating report..."):
             report_html = generate_day_ahead_preview(filtered_df, assistant)
-        st.session_state.report_html = report_html
-        
-        st.html(st.session_state.report_html)
-        store_report(st.session_state.report_html)
+
+st.session_state.report_html = report_html        
+st.html(st.session_state.report_html)
+store_report(st.session_state.report_html)
 
 st.divider()
 if st.session_state.report_html is None:
