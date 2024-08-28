@@ -7,6 +7,7 @@ import re
 import plotly.express as px
 from datetime import datetime, timedelta
 import pytz
+from pymongo import MongoClient
 
 aest = pytz.timezone('Australia/Sydney')
 
@@ -286,3 +287,8 @@ def get_data(selected_date = None):
     cvar_df = get_csv_from_sharepoint_by_path(CLIENT_ID, CLIENT_SECRET, TENANT_ID, SITE_ID, f'/ProfitLoss/{most_recent_cvar}')
     
     return most_recent_time, df, curr_exposure_df, dv01_df, cvar_df
+
+@st.cache_resource
+def get_mongo_access():
+    client = MongoClient(st.secrets["MONGO_URI"])
+    return client

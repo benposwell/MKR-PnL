@@ -5,6 +5,7 @@ from pinecone import Pinecone
 from pinecone_plugins.assistant.models.chat import Message
 from utils.chat_funcs import upload_files, list_and_delete_files, get_file_list, create_new_chat, update_chat_name, generate_subject, delete_chat, load_user_chats, save_user_chats, check_password
 from pymongo import MongoClient
+from utils.funcs import get_mongo_access
 
 # Initialize Pinecone
 pc = Pinecone(api_key=st.secrets["PINECONE_API_KEY"])
@@ -12,7 +13,8 @@ assistant = pc.assistant.Assistant(
     assistant_name=st.secrets["PINECONE_ASSISTANT_NAME"]
 )
 
-client = MongoClient(st.secrets["MONGO_URI"])
+# client = MongoClient(st.secrets["MONGO_URI"])
+client = get_mongo_access()
 db = client[st.secrets["MONGO_DB_NAME"]]
 chats_collection = db["chats.user_chats"]
 

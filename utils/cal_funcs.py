@@ -8,6 +8,7 @@ from pinecone_plugins.assistant.models.chat import Message
 import io
 from collections import defaultdict
 from pymongo import MongoClient
+from utils.funcs import get_mongo_access
 
 curr_country_dict = {
     'AUD': 'Australia',
@@ -192,7 +193,8 @@ def generate_day_ahead_preview(cal_events, assistant):
 
 
 def store_report(report_html):
-    client = MongoClient(st.secrets["MONGO_URI"])
+    client = get_mongo_access()
+    # client = MongoClient(st.secrets["MONGO_URI"])
     db = client[st.secrets["MONGO_DB_NAME"]]
     reports_collection = db["DocumentStore.reports"]
     
@@ -204,7 +206,8 @@ def store_report(report_html):
     )
 
 def get_report():
-    client = MongoClient(st.secrets["MONGO_URI"])
+    client = get_mongo_access()
+    # client = MongoClient(st.secrets["MONGO_URI"])
     db = client[st.secrets["MONGO_DB_NAME"]]
     reports_collection = db["DocumentStore.reports"]
     
