@@ -29,3 +29,7 @@ name = "Calendar"
 [[pages]]
 path = "pages/Resources.py"
 name = "Resources"
+
+[[pages]]
+path = "pages/MissionCrest.py"
+name = "Mission Crest Reports"

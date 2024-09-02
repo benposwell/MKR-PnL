@@ -7,6 +7,9 @@ from utils.chat_funcs import upload_files, list_and_delete_files, get_file_list,
 from pymongo import MongoClient
 from utils.funcs import get_mongo_access
 
+if not check_password():
+    st.stop()
+
 # Initialize Pinecone
 pc = Pinecone(api_key=st.secrets["PINECONE_API_KEY"])
 assistant = pc.assistant.Assistant(
@@ -22,9 +25,6 @@ chats_collection = db["chats.user_chats"]
 
 # Create tabs
 tab1, tab2 = st.tabs(["Chat", "Manage Files"])
-
-if not check_password():
-    st.stop()
 
 if 'chats' not in st.session_state:
     st.session_state.chats = load_user_chats(st.session_state.logged_in_user, chats_collection)
