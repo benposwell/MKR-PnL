@@ -146,15 +146,6 @@ with col_right:
     
 st.divider()
 
-if 'report_html' not in st.session_state:
-    st.session_state.report_html = get_report()
-
-if 'report_html' in st.session_state and st.session_state.report_html:
-    st.html(st.session_state.report_html)
-
-
-
-
 st.markdown(
     f"""
     <div>
@@ -242,7 +233,13 @@ events_this_week = events_this_week.merge(averages, on='ID', how='left')
 cols_to_show = ['FORMATTED_TIME', 'COUNTRY_NAME', 'EVENT_NAME', 'RELEVANCY', 'PRIOR', 'SURVEY_MEDIAN', '3M Average', '6M Average', '1Y Average', '3Y Average']
 st.dataframe(events_this_week[cols_to_show], use_container_width=True, hide_index=True)
 
+st.divider()
 
+if 'report_html' not in st.session_state:
+    st.session_state.report_html = get_report()
+
+if 'report_html' in st.session_state and st.session_state.report_html:
+    st.html(st.session_state.report_html)
 
 # Apply custom CSS styling
 st.markdown(

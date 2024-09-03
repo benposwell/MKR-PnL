@@ -96,11 +96,13 @@ col1, col2 = st.columns(2)
 with col1:
     date_selector = st.date_input("Select Date", value=datetime.now())
     impacts = (cal_events['RELEVANCY'].unique())
-    selected_impacts = st.multiselect("Select Impact Levels", impacts, default=impacts, key = "report_impacts_selector")
+    default_impacts = ['Very High', 'High']
+    selected_impacts = st.multiselect("Select Impact Levels", impacts, default=default_impacts, key = "report_impacts_selector")
 
 with col2:
     countries = (cal_events['COUNTRY_NAME'].unique())
-    selected_countries = st.multiselect("Select Countries", countries, default=countries, key="report_countries_selector")
+    default_countries = ['Australia', 'United States', 'Japan', 'United Kingdom', 'China']
+    selected_countries = st.multiselect("Select Countries", countries, default=default_countries, key="report_countries_selector")
     
     
 # Function to toggle show_raw_data
