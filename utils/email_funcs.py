@@ -306,7 +306,6 @@ def send_email(interval, recipients, data, dv01_data, cvar_data, curr_exp_data, 
     date_str = today.strftime("%m/%d/%Y")
     latest_hour = today.hour
     date_spt = today.strftime("%Y-%m-%d")
-    # formatted_date = f"{date_spt}-{latest_hour:02d}-00"
     pio.templates.default = "plotly"
 
     df = data

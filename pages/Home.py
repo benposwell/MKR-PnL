@@ -7,6 +7,7 @@ import math
 from datetime import datetime, timedelta
 from utils.cal_funcs import get_report
 import plotly.graph_objects as go
+import pytz
 
 if not check_password():
     st.stop()
@@ -226,7 +227,7 @@ averages = pd.read_csv('data/bbg_averages.csv')
 week_events = week_events[week_events['COUNTRY_NAME'].isin(countries_of_interest)]
 week_events['RELEASE_DATE_TIME'] = pd.to_datetime(week_events['RELEASE_DATE_TIME'])
 week_events['FORMATTED_TIME'] = week_events['RELEASE_DATE_TIME'].dt.strftime("%H:%M, %A - %B %d")
-events_this_week = week_events[(week_events['RELEASE_DATE_TIME'].dt.date >= datetime.now().date()) & (week_events['RELEASE_DATE_TIME'].dt.date <= datetime.now().date() + timedelta(days=7))]
+events_this_week = week_events[(week_events['RELEASE_DATE_TIME'].dt.date >= datetime.now(pytz.timezone('Australia/Sydney')).date()) & (week_events['RELEASE_DATE_TIME'].dt.date <= datetime.now(pytz.timezone('Australia/Sydney')).date() + timedelta(days=7))]
 events_this_week = events_this_week[(events_this_week['RELEVANCY'] == 'Very High') | (events_this_week['RELEVANCY'] == 'High')]
 events_this_week = events_this_week.merge(averages, on='ID', how='left')
 

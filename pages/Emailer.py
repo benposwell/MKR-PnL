@@ -42,28 +42,48 @@ st.session_state.selected_date = selected_date
 
 if 'selected_hour' not in st.session_state:
     st.session_state.selected_hour = datetime.now(aest).hour
+if 'selected_minute' not in st.session_state:
+    st.session_state.selected_minute = datetime.now(aest).minute
 
 selected_hour = st.selectbox("Select an hour", list(range(0, 24)))
 st.session_state.selected_hour = selected_hour
 
+selected_minute = st.selectbox("Select a minute", list(range(0, 59)))
+st.session_state.selected_minute = selected_minute
+
 # Formatted date and hour
-formatted_date = f"{selected_date.strftime('%Y-%m-%d')}-{selected_hour:02d}-00"
+formatted_date = f"{selected_date.strftime('%Y-%m-%d')}-{selected_hour:02d}-{selected_minute:02d}"
 
-if st.button("Send Email"):
-    # Progres bar
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("Send Email", use_container_width=True):
+        # Progres bar
+        progress_bar = st.progress(0)
+        status_text = st.empty()
 
-    # inputted_date = st.date_input("Select a date")
-    most_recent_time, data, curr_exp_data, dv01_data, cvar_data = get_data(formatted_date)
+        # inputted_date = st.date_input("Select a date")
+        most_recent_time, data, curr_exp_data, dv01_data, cvar_data = get_data(formatted_date)
 
 
-    if data is not None:
-        send_email(interval, recipient, data, dv01_data, cvar_data, curr_exp_data, formatted_date)
-        status_text.text("Email Sent!")
-    else:
-        st.warning("Please click 'Refresh Data' to load the data.")
-    progress_bar.progress(100)
+        if data is not None:
+            send_email(interval, recipient, data, dv01_data, cvar_data, curr_exp_data, formatted_date)
+            status_text.text("Email Sent!")
+        else:
+            st.warning("Please click 'Refresh Data' to load the data.")
+        progress_bar.progress(100)
+with col2:
+    if st.button("Send Latest", key="send_latest", use_container_width=True):
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+
+        most_recent_time, data, curr_exp_data ,dv01_data, cvar_data = get_data()
+        if data is not None:
+            send_email(interval, recipient, data, dv01_data, cvar_data, curr_exp_data, most_recent_time)
+            status_text.text("Email Sent!")
+        else:
+            st.warning("Please click 'Refresh Data' to load the data.")
+        progress_bar.progress(100)
+
 st.divider()
 
 if st.sidebar.button("Logout"):
