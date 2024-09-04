@@ -33,7 +33,3 @@ name = "Resources"
 [[pages]]
 path = "pages/MissionCrest.py"
 name = "Mission Crest Reports"
-
-[[pages]]
-path = "pages/BetterRAG.py"
-name = "Better RAG"
