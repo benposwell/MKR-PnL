@@ -29,7 +29,7 @@ def init_connections():
 def get_document_list(_index):
     results = index.query(
         vector=[0]*3072,
-        top_k=1000,
+        top_k=10000,
         include_metadata=True
     )
     return [match['metadata'] for match in results['matches']]
