@@ -98,39 +98,63 @@ def display_message(role, content):
 
 def check_password():
     st.divider()
-    """Returns `True` if the user had a correct password."""
+    """Returns `True` if the user selected their username."""
     def login_form():
-        """Form with widgets to collect user information"""
-        with st.form("Credentials"):
-            st.text_input("Username", key="username")
-            st.text_input("Password", type="password", key="password")
-            st.form_submit_button("Log in", on_click=password_entered)
+        """Form with a dropdown to select the username"""
+        with st.form("Select Username"):
+            usernames = list(st.secrets["passwords"].keys())
+            st.selectbox("Username", usernames, key="username")
+            st.form_submit_button("Continue", on_click=username_selected)
 
-    def password_entered():
-        """Checks whether a password entered by the user is correct."""
-        if (
-            st.session_state["username"] in st.secrets["passwords"]
-            and hmac.compare_digest(
-                st.session_state["password"],
-                st.secrets.passwords[st.session_state["username"]],
-            )
-        ):
-            st.session_state["password_correct"] = True
-            st.session_state["logged_in_user"] = st.session_state["username"]
-            del st.session_state["password"]  # Don't store the password.
-            del st.session_state["username"]
-        else:
-            st.session_state["password_correct"] = False
+    def username_selected():
+        """Records the selected username."""
+        st.session_state["password_correct"] = True
+        st.session_state["logged_in_user"] = st.session_state["username"]
+        del st.session_state["username"]
 
-    # Return True if the username + password is validated.
+    # Return True if the username is selected.
     if st.session_state.get("password_correct", False):
         return True
 
-    # Show inputs for username + password.
+    # Show dropdown for username selection.
     login_form()
-    if "password_correct" in st.session_state:
-        st.error("😕 User not known or password incorrect")
     return False
+
+# def check_password():
+#     st.divider()
+#     """Returns `True` if the user had a correct password."""
+#     def login_form():
+#         """Form with widgets to collect user information"""
+#         with st.form("Credentials"):
+#             st.text_input("Username", key="username")
+#             st.text_input("Password", type="password", key="password")
+#             st.form_submit_button("Log in", on_click=password_entered)
+
+#     def password_entered():
+#         """Checks whether a password entered by the user is correct."""
+#         if (
+#             st.session_state["username"] in st.secrets["passwords"]
+#             and hmac.compare_digest(
+#                 st.session_state["password"],
+#                 st.secrets.passwords[st.session_state["username"]],
+#             )
+#         ):
+#             st.session_state["password_correct"] = True
+#             st.session_state["logged_in_user"] = st.session_state["username"]
+#             del st.session_state["password"]  # Don't store the password.
+#             del st.session_state["username"]
+#         else:
+#             st.session_state["password_correct"] = False
+
+#     # Return True if the username + password is validated.
+#     if st.session_state.get("password_correct", False):
+#         return True
+
+#     # Show inputs for username + password.
+#     login_form()
+#     if "password_correct" in st.session_state:
+#         st.error("😕 User not known or password incorrect")
+#     return False
 
 def initialize_user(username, chats_collection):
     new_user = {

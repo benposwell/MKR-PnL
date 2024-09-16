@@ -19,10 +19,6 @@ path = "pages/Emailer.py"
 name = "Emailer"
 
 [[pages]]
-path = "pages/MKRGPT.py"
-name = "MKRGPT"
-
-[[pages]]
 path = "pages/Calendar.py"
 name = "Calendar"
 
@@ -33,3 +29,7 @@ name = "Resources"
 [[pages]]
 path = "pages/MissionCrest.py"
 name = "Mission Crest Reports"
+
+[[pages]]
+path = "pages/BetterRAG.py"
+name = "BRAG"

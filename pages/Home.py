@@ -138,10 +138,12 @@ with col_middle:
         st.switch_page("pages/Historicals.py")
     if st.button("📧 Emailer", use_container_width=True):
         st.switch_page("pages/Emailer.py")
+    if st.button("📈 Mission Crest Reports", use_container_width=True):
+        st.switch_page("pages/MissionCrest.py")
 
 with col_right:
-    if st.button("🤖 MKRGPT", use_container_width=True):
-        st.switch_page("pages/MKRGPT.py")
+    if st.button("🤖 BRAG", use_container_width=True):
+        st.switch_page("pages/BetterRAG.py")
     if st.button("📅 Calendar", use_container_width=True):
         st.switch_page("pages/Calendar.py")
     
