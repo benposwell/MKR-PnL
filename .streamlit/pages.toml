@@ -33,3 +33,7 @@ name = "Mission Crest Reports"
 [[pages]]
 path = "pages/BetterRAG.py"
 name = "BRAG"
+
+[[pages]]
+path = "pages/ResearchPortal.py"
+name = "Research Portal"

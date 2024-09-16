@@ -146,6 +146,8 @@ with col_right:
         st.switch_page("pages/BetterRAG.py")
     if st.button("📅 Calendar", use_container_width=True):
         st.switch_page("pages/Calendar.py")
+    if st.button("📚 Research Portal", use_container_width=True):
+        st.switch_page("pages/ResearchPortal.py")
     
 st.divider()
 
