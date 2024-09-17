@@ -65,7 +65,7 @@ def display_documents(documents, filters):
         
         for _, doc in unique_docs.iterrows():
             if 'web_url' in doc and doc['web_url']:
-                unique_docs.loc[_, 'web_url'] = f"[{doc['document_title']}]({doc['web_url']})"
+                unique_docs.loc[_, 'web_url'] = doc['web_url']
             else:
                 unique_docs.loc[_, 'web_url'] = f"{doc['document_title']} (No URL available)"
         df_to_display = unique_docs[['document_title', 'file_created_at', 'file_sender', 'Summary', 'web_url']]
@@ -75,6 +75,7 @@ def display_documents(documents, filters):
             'file_created_at': 'File Created At',
             'file_sender': 'File Sender'
         })
+
         st.data_editor(
             df_to_display,
             column_config={
