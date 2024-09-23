@@ -341,7 +341,7 @@ if st.session_state.current_chat_id:
         with st.chat_message("assistant", avatar="images/icon.png"):
             message_placeholder = st.empty()
             full_response = ""
-            # completion, sources = rag_pipeline(prompt, index, conversation, encoder, oai_client, [pinecone_date_filter], search_comprehensiveness, answer_detail)
+            completion, sources = rag_pipeline(prompt, index, conversation, encoder, oai_client, [pinecone_date_filter], search_comprehensiveness, answer_detail)
             for response in completion:
                 if isinstance(response, str):
                     full_response += response
