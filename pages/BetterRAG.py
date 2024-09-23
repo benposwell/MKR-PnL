@@ -12,8 +12,6 @@ import json
 import unicodedata
 import re
 
-
-
 if not check_password():
     st.stop()
 
@@ -71,7 +69,8 @@ def gen_query_context(text, index, encoder, filters, search_comprehensiveness):
             sources.append({
                 "id": source_ids[title],
                  "title": title,
-                 "url": web_url
+                 "url": web_url,
+                 "created_at": m["metadata"]["file_created_at"]
             })
         
         source_id = source_ids[title]
@@ -92,8 +91,7 @@ def query_openai(question, chunks, conversation, oai_client, sources, model="gpt
         f"3. Be thoughtful and strictly relevant. Exclude courteous statements or unnecessary information not directly related to the query and context.\n"
         f"4. If the relevant information is not present in the context, clearly state that you cannot find the information.\n"
         f"5. Consider second-order effects and interrelated events discussed in the context when formulating your answer.\n"
-        f"6. After your main response, if applicable, provide a concise list of additional relevant topics or ideas from the context for further exploration.\n"
-        f"7. When referencing information from the context, include citations using the source numbers provided.\n"
+        f"6. When referencing information from the context, include citations using the source numbers provided.\n"
         f"Remember, your primary goal is to provide accurate, relevant, and unbiased financial analysis based solely on the given context and conversation history.\n"
     )
 
@@ -161,8 +159,15 @@ client = get_mongo_access()
 db = client[st.secrets["MONGO_DB_NAME"]]
 custom_chats_collection = db["chats.betterrag_user_chats"]
 
-st.title("BetterRAG - Developer Edition")
-st.write("Warning, not for production use")
+st.markdown(
+    f"""
+    <div style="text-align: center;">
+        <h1>BRAG</h1>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+st.divider()
 
 if 'chats' not in st.session_state:
     st.session_state.chats = load_user_chats(st.session_state.logged_in_user, custom_chats_collection)
@@ -178,9 +183,13 @@ now = datetime.now(aest)
 if 'GPT_date_filter' not in st.session_state:
     st.session_state.GPT_date_filter = [min_time, max_time]
 
-this_week_button = st.button("This Week", use_container_width=True, help=f"Filter to documents created between {datetime.strftime(now - timedelta(days=now.weekday()), '%Y-%m-%d')} and {datetime.strftime(now, '%Y-%m-%d')}")
-last_week_button = st.button("Last Week", use_container_width=True, help=f"Filter to documents created between {datetime.strftime(now - timedelta(days=now.weekday() + 7), '%Y-%m-%d')} and {datetime.strftime(now - timedelta(days=now.weekday()), '%Y-%m-%d')}")
-all_time_button = st.button("All Time", use_container_width=True, help=f"Filter to documents created between {datetime.strftime(min_time, '%Y-%m-%d')} and {datetime.strftime(max_time, '%Y-%m-%d')}")
+col1, col2, col3  = st.columns(3)
+with col1:
+    this_week_button = st.button("This Week", use_container_width=True, help=f"Filter to documents created between {datetime.strftime(now - timedelta(days=now.weekday()), '%Y-%m-%d')} and {datetime.strftime(now, '%Y-%m-%d')}")
+with col2:
+    last_week_button = st.button("Last Week", use_container_width=True, help=f"Filter to documents created between {datetime.strftime(now - timedelta(days=now.weekday() + 7), '%Y-%m-%d')} and {datetime.strftime(now - timedelta(days=now.weekday()), '%Y-%m-%d')}")
+with col3:
+    all_time_button = st.button("All Time", use_container_width=True, help=f"Filter to documents created between {datetime.strftime(min_time, '%Y-%m-%d')} and {datetime.strftime(max_time, '%Y-%m-%d')}")
 
 if this_week_button:
     start_of_week = now - timedelta(days=now.weekday())
@@ -193,7 +202,7 @@ elif last_week_button:
 elif all_time_button:
     st.session_state.GPT_date_filter = [min_time, max_time]
 
-date_range_filter = st.date_input("Select Date Range", st.session_state.get('GPT_date_filter', [min_time, max_time]), key="GPT_date_filter", min_value=min_time, max_value=max_time, help="Filter to documents created within the selected date range")
+date_range_filter = st.date_input("Select Search Date Range", st.session_state.get('GPT_date_filter', [min_time, max_time]), key="GPT_date_filter", min_value=min_time, max_value=max_time, help="Filter to documents created within the selected date range")
 date_range_filter = [datetime.combine(dt, datetime.min.time()).astimezone(aest).replace(hour=0, minute=0, second=0, microsecond=0) for dt in date_range_filter]
 unix_start, unix_end = [int(dt.timestamp()) for dt in date_range_filter]
 
@@ -204,53 +213,135 @@ pinecone_date_filter = {
     }
 }
 
+
 search_comprehensiveness = st.slider("Search Comprehensiveness", min_value = 0.5, max_value = 2.0, value = 1.0, step = 0.1, help="Adjust the comprehensiveness of the search. Higher values will search more documents but may increase costs.")
 answer_detail = st.slider("Answer Detail", min_value = 0.5, max_value = 2.0, value = 1.0, step = 0.1, help = "Adjust the level of detail in the answer. Higher values will provide more comprehensive answers but may increase costs.")
 
 encoder, index, oai_client = init_connections()
 st.sidebar.title(f"Welcome, {st.session_state.logged_in_user}!")
 
-if st.sidebar.button("New Chat", key="new_chat"):
+if st.sidebar.button("🏠", key="home_button", help="Return to BRAG Home", use_container_width=True):
+    st.session_state.current_chat_id = None
+    st.rerun()
+if st.sidebar.button("➕", key="new_chat", use_container_width=True):
     save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection)
     create_new_chat()
 
+st.sidebar.divider()
 st.sidebar.write("Existing Chats:")
-cols = st.sidebar.columns(2)
-for i, (chat_id, chat_data) in enumerate(st.session_state.chats.items()):
-    col = cols[i % 2]
-    with col:
-        if isinstance(chat_data, dict) and 'name' in chat_data:
-            truncated_name = " ".join(chat_data['name'].split()[:3]) + "..."
-            chat_container = st.container()
-            if chat_container.button(truncated_name, key=f"select_{chat_id}", use_container_width=True):
+for chat_id, chat_data in st.session_state.chats.items():
+    if isinstance(chat_data, dict) and 'name' in chat_data:
+        # truncated_name = " ".join(chat_data['name'].split()[:]) + "..."
+        truncated_name = chat_data['name']
+        col1, col2 = st.sidebar.columns([0.9, 0.1])
+        with col1:
+            if st.button(truncated_name, key=f"select_{chat_id}", use_container_width=True):
                 st.session_state.current_chat_id = chat_id
-
-
-            if chat_container.button("🗑️", key=f"delete_{chat_id}", use_container_width=True):
+        with col2:
+            if st.button("🗑️", key=f"delete_{chat_id}", use_container_width=True):
                 delete_chat(chat_id)
                 save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection)
 
+st.divider()
 if st.session_state.current_chat_id:
     current_chat = st.session_state.chats[st.session_state.current_chat_id]
-    st.subheader(f"Current Chat: {current_chat.get('name', 'Unnamed Chat')}")
+    col1, col2 = st.columns([10, 1])
+    with col1:
+        title_placeholder = st.empty()
+        title_placeholder.subheader(f"{current_chat.get('name', 'Unnamed Chat')}")
+    with col2:
+        st.button("➕", key="interior_new_chat", help="Create a new chat", on_click=lambda: (save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection), create_new_chat(), st.rerun()), use_container_width=True, type="secondary")
+    
+    if 'autofill_prompt' not in st.session_state:
+        st.session_state.autofill_prompt = ""
+    if 'show_preloaded_buttons' not in st.session_state:
+        st.session_state.show_preloaded_buttons = True
+
+    if len(current_chat['messages']) == 0 and st.session_state.show_preloaded_buttons:
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Summarise Daily Events 📅", use_container_width=True):
+                date_string = datetime.strftime(now, '%A, %B %d, %Y')
+                prompt = f"""
+                    Summarise key upcoming events on {date_string} that I need to know about. Include a preview that details analyst forecasts"
+                """
+                st.session_state.autofill_prompt = prompt
+                st.session_state.show_preloaded_buttons = False
+                st.rerun()
+            if st.button("ANZ Preview 🇦🇺", use_container_width=True):
+                this_week_string = datetime.strftime(now - timedelta(days=now.weekday()), '%Y-%m-%d')
+                prompt = f"""
+                    Summarise upcoming events in Australia and New Zealand for the week starting {this_week_string}. Include a preview that details analyst forecasts and current positioning.
+                """
+                pinecone_date_filter = {
+                    "file_created_at_unix": {
+                        "$gte": int((now - timedelta(days=now.weekday())).timestamp()),
+                        "$lte": int((now + timedelta(days=6 - now.weekday())).timestamp())
+                    }
+                }
+                st.session_state.autofill_prompt = prompt
+                st.session_state.show_preloaded_buttons = False
+                st.rerun()
+        with col2:
+            if st.button("Latest News Preview 📰", use_container_width=True):
+                prompt = f"""
+                    Summarise all the research that we have received in the last 24 hours. The time now is {datetime.strftime(now, '%A, %B %d, %Y at %H:%M %p')}.
+                """
+                pinecone_date_filter = {
+                    "file_created_at_unix": {
+                        "$gte": int((now - timedelta(days=1)).timestamp()),
+                        "$lte": int((now).timestamp())
+                    }
+                }
+                st.session_state.autofill_prompt = prompt
+                st.session_state.show_preloaded_buttons = False
+                st.rerun()
+            if st.button("US Preview 🇺🇸", use_container_width=True):
+                this_week_string = datetime.strftime(now - timedelta(days=now.weekday()), '%Y-%m-%d')
+                prompt = f"""
+                    Summarise upcoming events in the United States for the week starting {this_week_string}. Include a preview that details analyst forecasts and current positioning.
+                """
+                pinecone_date_filter = {
+                    "file_created_at_unix": {
+                        "$gte": int((now - timedelta(days=now.weekday())).timestamp()),
+                        "$lte": int((now + timedelta(days=6 - now.weekday())).timestamp())
+                    }
+                }
+                st.session_state.autofill_prompt = prompt
+                st.session_state.show_preloaded_buttons = False
+                st.rerun()
     for message in current_chat['messages']:
         with st.chat_message(message['role'], avatar='images/icon.png' if message["role"] == "assistant" else "human"):
             st.markdown(message['content'])
     
-    if prompt := st.chat_input("What would you like to know?"):
+    afternoon = datetime.now(aest).hour >= 12
+    evening = datetime.now(aest).hour >= 18
+    prompt = st.chat_input(f"How can I help you this {'evening' if evening else 'afternoon' if afternoon else 'morning'}?")
+
+    if prompt or st.session_state.autofill_prompt:
+        prompt = prompt or st.session_state.autofill_prompt
+        st.session_state.autofill_prompt = ""
+        st.session_state.show_preloaded_buttons = False
+        if len(current_chat['messages']) == 0:
+            stream = generate_subject(prompt, oai_client)
+
+            full_chat_name = ""
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    full_chat_name += chunk.choices[0].delta.content
+                    title_placeholder.subheader(full_chat_name)
+
+            update_chat_name(st.session_state.current_chat_id, full_chat_name)
+        
         with st.chat_message("user"):
             st.markdown(prompt)
-
-        if len(current_chat['messages']) == 0:
-            new_chat_name = generate_subject(prompt)
-            update_chat_name(st.session_state.current_chat_id, new_chat_name)
         
         conversation = "\n".join([f"{m['role']}: {m['content']}" for m in current_chat['messages'][-5:]])
-
+        
         with st.chat_message("assistant", avatar="images/icon.png"):
             message_placeholder = st.empty()
             full_response = ""
-            completion, sources = rag_pipeline(prompt, index, conversation, encoder, oai_client, [pinecone_date_filter], search_comprehensiveness, answer_detail)
+            # completion, sources = rag_pipeline(prompt, index, conversation, encoder, oai_client, [pinecone_date_filter], search_comprehensiveness, answer_detail)
             for response in completion:
                 if isinstance(response, str):
                     full_response += response
@@ -262,7 +353,7 @@ if st.session_state.current_chat_id:
             if sources:
                 sources_md = "\n\n### Sources:\n"
                 for source in sources:
-                    sources_md += f"- [{source['id']}] [{source['title']}]({source['url']})\n"
+                    sources_md += f"- [{source['id']}] [{source['title']}]({source['url']}) (Created: {datetime.strptime(source['created_at'], '%Y-%m-%dT%H:%M:%S%z').strftime('%H:%M %A, %B %d, %Y')})\n"
                 full_response += sources_md
             
             message_placeholder.markdown(full_response)
@@ -274,30 +365,26 @@ if st.session_state.current_chat_id:
         st.rerun()
 else:
     st.info("Please create a new chat or select an existing one from below:")
+    st.button("➕", key="interior_new_chat", help="Create a new chat", on_click=lambda: (save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection), create_new_chat(), st.rerun()), use_container_width=True, type="secondary")
     if len(st.session_state.chats) > 0:
-        body_cols = st.columns(2)  # Create 2 columns
-        for i, (chat_id, chat_data) in enumerate(st.session_state.chats.items()):
-            col = body_cols[i % 2]  # Alternate between columns
-            with col:
-                if isinstance(chat_data, dict) and 'name' in chat_data:
-                    truncated_name = " ".join(chat_data['name'].split()[:3]) + "..."
-                    # Create a container for each chat button
-                    chat_container = st.container()
-                    # Add chat selection button
-                    if chat_container.button(truncated_name, key=f"body_select_{chat_id}", use_container_width=True):
+        for chat_id, chat_data in st.session_state.chats.items():
+            if isinstance(chat_data, dict) and 'name' in chat_data:
+                col1, col2 = st.columns([9, 1])
+                with col1:
+                    if st.button(chat_data['name'], key=f"body_select_{chat_id}", use_container_width=True):
                         st.session_state.current_chat_id = chat_id
-                    # Add delete button
-                    if chat_container.button("🗑️", key=f"body_delete_{chat_id}", use_container_width=True):
+                with col2:
+                    if st.button("🗑️", key=f"body_delete_{chat_id}", use_container_width=True, help="Delete the selected chat"):
                         delete_chat(chat_id)
                         save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection)
     else:
-        # Place a new chat button 
         if st.button("Create New Chat", key="create_new_chat", use_container_width=True):
             save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection)
             create_new_chat()
 
 
-if st.sidebar.button("Logout"):
+st.sidebar.divider()
+if st.sidebar.button("Logout", use_container_width=True):
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.rerun()

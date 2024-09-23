@@ -57,6 +57,7 @@ def create_new_chat():
         'messages': [],
         'created_at': datetime.now().timestamp()  # Add timestamp as created_at field
     }
+    st.session_state.show_preloaded_buttons = True
     st.session_state.current_chat_id = chat_id
 
 def delete_chat(chat_id):
@@ -69,26 +70,23 @@ def update_chat_name(chat_id, new_name):
     if chat_id in st.session_state.chats:
         st.session_state.chats[chat_id]['name'] = new_name
 
-def generate_subject(question, max_words=5):
-    nlp = spacy.load("en_core_web_sm")
-    doc = nlp(question)
+def generate_subject(question, openai_client):
+    prompt = "Please generate a concise subject for the following question capturing core information. Use Acronyms to shorten your response if possible. Only output the subject and nothing else."
 
-    subjects = []
-    for token in doc:
-        # Look for specific types of subjects
-        if token.dep_ in ('nsubj', 'nsubjpass', 'ROOT', 'pobj', 'dobj'):
-            # Include the subject itself
-            subject_phrase = [token.text]
-            # Include any compound preceding the subject
-            for child in token.children:
-                if child.dep_ == 'compound':
-                    subject_phrase.insert(0, child.text.capitalize())
-            subjects.append(" ".join(subject_phrase))
+    user_content = f"Question: {question}"
+
+    messages = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": user_content}
+    ]
     
-    # Combine the subjects into a single string and limit the number of words
-    subject_string = " ".join(subjects[:max_words])
-    
-    return subject_string
+    stream = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        stream=True
+    )
+    return stream
+
 
 def display_message(role, content):
     if role == "user":
@@ -119,6 +117,31 @@ def check_password():
     # Show dropdown for username selection.
     login_form()
     return False
+
+def initialize_user(username, chats_collection):
+    new_user = {
+        "username":username,
+        "chats":{}
+    }
+    chats_collection.insert_one(new_user)
+    return new_user["chats"]
+
+def load_user_chats(username, chats_collection):
+    user_chats = chats_collection.find_one({"username": username})
+    if user_chats:
+        return user_chats["chats"]
+    else:
+        st.info(f"Welcome, {username}! Initializing your account.")
+        return initialize_user(username, chats_collection)
+    return {}
+
+def save_user_chats(username, chats, chats_collection):
+    chats_collection.update_one(
+        {"username": username},
+        {"$set": {"chats": chats}},
+        upsert=True
+    )
+
 
 # def check_password():
 #     st.divider()
@@ -155,27 +178,3 @@ def check_password():
 #     if "password_correct" in st.session_state:
 #         st.error("😕 User not known or password incorrect")
 #     return False
-
-def initialize_user(username, chats_collection):
-    new_user = {
-        "username":username,
-        "chats":{}
-    }
-    chats_collection.insert_one(new_user)
-    return new_user["chats"]
-
-def load_user_chats(username, chats_collection):
-    user_chats = chats_collection.find_one({"username": username})
-    if user_chats:
-        return user_chats["chats"]
-    else:
-        st.info(f"Welcome, {username}! Initializing your account.")
-        return initialize_user(username, chats_collection)
-    return {}
-
-def save_user_chats(username, chats, chats_collection):
-    chats_collection.update_one(
-        {"username": username},
-        {"$set": {"chats": chats}},
-        upsert=True
-    )

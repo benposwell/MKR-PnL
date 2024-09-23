@@ -101,7 +101,6 @@ country_curr_dict = {
 }
 
 
-
 def generate_batch_prompt(events: pd.DataFrame) -> str:
     curr_exp_data = st.session_state.curr_exp_data
     
