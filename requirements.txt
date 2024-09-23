@@ -3,7 +3,7 @@ numpy==1.26.4
 openai==1.45.0
 pandas==2.0.2
 pinecone==5.1.0
-semantic_router==0.0.65
+semantic_router==0.0.37
 st_pages==1.0.1
 websocket_client==0.58.0
 murmurhash==1.0.10
