@@ -56,12 +56,29 @@ if 'autofill_prompt' not in st.session_state:
     st.session_state.autofill_prompt = None
 if 'show_preloaded_buttons' not in st.session_state:
     st.session_state.show_preloaded_buttons = True
+if 'search_comprehensiveness' not in st.session_state:
+    st.session_state.search_comprehensiveness = 1.0
+if 'answer_detail' not in st.session_state:
+    st.session_state.answer_detail = 1.0
 ###################################################################################################################
 
 
 preloaded_prompt = st.query_params.get("prompt", None)
+preloaded_start_date = datetime.strptime(st.query_params.get("min_date", None), "%Y-%m-%d") if st.query_params.get("min_date") else None
+preloaded_end_date = datetime.strptime(st.query_params.get("max_date", None), "%Y-%m-%d") if st.query_params.get("max_date") else None
+search_comprehensiveness = st.query_params.get("search_comprehensiveness", 1.0)
+answer_detail = st.query_params.get("answer_detail", 1.0)
 if preloaded_prompt:
     st.session_state.autofill_prompt = preloaded_prompt
+    if preloaded_start_date and preloaded_end_date:
+        st.session_state.GPT_date_filter = [preloaded_start_date, preloaded_end_date]
+        st.session_state.pinecone_date_filter = create_pinecone_date_filter(preloaded_start_date, preloaded_end_date)
+        print("For dates:", preloaded_start_date, preloaded_end_date)
+        print("CREATED Pinecone Date Filter:", st.session_state.pinecone_date_filter)
+    if search_comprehensiveness is not None:
+        st.session_state.search_comprehensiveness = float(search_comprehensiveness)
+    if answer_detail is not None:
+        st.session_state.answer_detail = float(answer_detail)
     st.session_state.show_preloaded_buttons = False
     create_new_chat()
     st.session_state.preloaded_prompt_processed = True
@@ -103,8 +120,23 @@ with col3:
 
 update_date_filter()
 
-search_comprehensiveness = st.slider("Search Comprehensiveness", min_value = 0.5, max_value = 2.0, value = 1.0, step = 0.1, help="Adjust the comprehensiveness of the search. Higher values will search more documents but may increase costs.")
-answer_detail = st.slider("Answer Detail", min_value = 0.5, max_value = 2.0, value = 1.0, step = 0.1, help = "Adjust the level of detail in the answer. Higher values will provide more comprehensive answers but may increase costs.")
+col1, col2 = st.columns(2)
+with col1:
+    search_comprehensiveness = st.slider("Search Comprehensiveness", 
+                                         min_value = 0.5, 
+                                         max_value = 2.0, 
+                                         value = st.session_state.search_comprehensiveness, 
+                                         step = 0.1, 
+                                         help="Adjust the comprehensiveness of the search. Higher values will search more documents. Returns 5*search_comprehensiveness documents.")
+    st.session_state.search_comprehensiveness = search_comprehensiveness
+with col2:
+    answer_detail = st.slider("Answer Detail", 
+                              min_value = 0.5, 
+                              max_value = 2.0, 
+                              value = st.session_state.answer_detail, 
+                              step = 0.1, 
+                              help = "Adjust the level of detail in the answer. Higher values will provide more comprehensive answers.")
+    st.session_state.answer_detail = answer_detail
 ###################################################################################################################
 
 
@@ -229,7 +261,7 @@ if st.session_state.current_chat_id:
             message_placeholder = st.empty()
             full_response = ""
             with st.spinner("Researching..."):
-                completion, sources = rag_pipeline(prompt, index, conversation, encoder, oai_client, [st.session_state.pinecone_date_filter], search_comprehensiveness, answer_detail)
+                completion, sources = rag_pipeline(prompt, index, conversation, encoder, oai_client, [st.session_state.pinecone_date_filter], st.session_state.search_comprehensiveness, st.session_state.answer_detail)
             for response in completion:
                 if isinstance(response, str):
                     full_response += response

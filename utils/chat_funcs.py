@@ -4,6 +4,18 @@ import hmac
 from datetime import datetime
 
 
+def generate_chat_url(prompt, min_date=None, max_date=None, search_comprehensiveness=None, answer_detail=None):
+    chat_url = f"https://mkrcapital.streamlit.app/BetterRAG?prompt={prompt}"
+    if min_date:
+        chat_url += f"&min_date={min_date}"
+    if max_date:
+        chat_url += f"&max_date={max_date}"
+    if search_comprehensiveness:
+        chat_url += f"&search_comprehensiveness={search_comprehensiveness}"
+    if answer_detail:
+        chat_url += f"&answer_detail={answer_detail}"
+    return chat_url
+
 
 def create_new_chat():
     chat_id = f"chat_{len(st.session_state.chats) + 1}"

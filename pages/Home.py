@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from utils.cal_funcs import get_report
 import plotly.graph_objects as go
 import pytz
+from utils.chat_funcs import generate_chat_url
 
 if not check_password():
     st.stop()
@@ -232,10 +233,25 @@ events_this_week = week_events[(week_events['RELEASE_DATE_TIME'].dt.date >= date
 events_this_week = events_this_week[(events_this_week['RELEVANCY'] == 'Very High') | (events_this_week['RELEVANCY'] == 'High')]
 events_this_week = events_this_week.merge(averages, on='ID', how='left')
 
-cols_to_show = ['FORMATTED_TIME', 'COUNTRY_NAME', 'EVENT_NAME', 'RELEVANCY', 'PRIOR', 'SURVEY_MEDIAN', '3M Average', '6M Average', '1Y Average', '3Y Average']
+events_this_week['BRAG Summary'] = events_this_week.apply(lambda row: generate_chat_url(
+    prompt=f"Provide details on {row['EVENT_NAME']}. Include a summary of all analyst forecasts and expectations, ensuring that a comprehensive overview is generated. If you can find it in the context, also include previous figures for this event, and any other relevant information.",
+    min_date=None,
+    max_date=None,
+    search_comprehensiveness=None,
+    answer_detail=None
+), axis=1)
+cols_to_show = ['FORMATTED_TIME', 'COUNTRY_NAME', 'EVENT_NAME', 'RELEVANCY', 'PRIOR', 'BRAG Summary', 'SURVEY_MEDIAN', '3M Average', '6M Average', '1Y Average', '3Y Average']
 
-
-st.dataframe(events_this_week[cols_to_show], use_container_width=True, hide_index=True)
+st.data_editor(
+    events_this_week[cols_to_show],
+    column_config={
+        "BRAG Summary": st.column_config.LinkColumn("BRAG Summary", 
+                                                    width="medium", 
+                                                    display_text="Generate BRAG Summary")
+    },
+    hide_index=True,
+    use_container_width=True
+)
 
 st.divider()
 
