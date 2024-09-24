@@ -3,52 +3,7 @@ import spacy
 import hmac
 from datetime import datetime
 
-def refresh_file_list(assistant):
-    with st.spinner("Refreshing file list..."):
-        st.session_state.file_list = assistant.list_files()
-    st.success("File list refreshed successfully!")
 
-def get_file_list(assistant):
-    if 'file_list' not in st.session_state:
-        refresh_file_list(assistant)
-    return st.session_state.file_list
-
-def upload_files(assistant):
-    uploaded_files = st.file_uploader("Upload PDF or TXT files", type=["pdf", "txt"], accept_multiple_files=True)
-    if uploaded_files:
-        existing_files = [file.name for file in get_file_list(assistant)]
-        for file in uploaded_files:
-            if file.name not in existing_files:
-                with st.spinner(f"Uploading {file.name}..."):
-                    # Save the file temporarily
-                    with open(file.name, "wb") as f:
-                        f.write(file.getbuffer())
-                    # Upload to Pinecone
-                    response = assistant.upload_file(file_path=file.name)
-                    st.success(f"{file.name} uploaded successfully!")
-            else:
-                st.info(f"{file.name} is already uploaded.")
-        refresh_file_list(assistant)  # Refresh the file list after uploads
-        return True
-    return False
-
-def list_and_delete_files(assistant):
-    files = get_file_list(assistant)
-    if files:
-        file_names = [file.name for file in files]
-        selected_file = st.selectbox("Select a file to delete", file_names)
-        
-        if st.button("Delete Selected File"):
-            file_id = next(file.id for file in files if file.name == selected_file)
-            assistant.delete_file(file_id=file_id)
-            st.success(f"{selected_file} deleted successfully!")
-            refresh_file_list(assistant)  # Refresh the file list after deletion
-            st.rerun()
-    else:
-        st.info("No files uploaded yet.")
-
-    if st.button("Refresh Database"):
-        refresh_file_list(assistant)
 
 def create_new_chat():
     chat_id = f"chat_{len(st.session_state.chats) + 1}"
@@ -60,18 +15,25 @@ def create_new_chat():
     st.session_state.show_preloaded_buttons = True
     st.session_state.current_chat_id = chat_id
 
-def delete_chat(chat_id):
-    del st.session_state.chats[chat_id]
-    if st.session_state.current_chat_id == chat_id:
-        st.session_state.current_chat_id = None
-    st.rerun()
+def delete_chat(chat_id, username, chats_collection, rerun=True):
+    if chat_id in st.session_state.chats:
+        del st.session_state.chats[chat_id]
+        if st.session_state.current_chat_id == chat_id:
+            st.session_state.current_chat_id = None
+
+        chats_collection.update_one(
+            {"username": username},
+            {"$unset": {f"chats.{chat_id}": ""}}
+        )
+    if rerun:
+        st.rerun()
 
 def update_chat_name(chat_id, new_name):
     if chat_id in st.session_state.chats:
         st.session_state.chats[chat_id]['name'] = new_name
 
 def generate_subject(question, openai_client):
-    prompt = "Please generate a concise subject for the following question capturing core information. Use Acronyms to shorten your response if possible. Only output the subject and nothing else."
+    prompt = "Please generate a concise subject for the following question capturing core information. Only output the subject and nothing else."
 
     user_content = f"Question: {question}"
 
@@ -141,6 +103,54 @@ def save_user_chats(username, chats, chats_collection):
         {"$set": {"chats": chats}},
         upsert=True
     )
+
+# LEGACY CODE
+def refresh_file_list(assistant):
+    with st.spinner("Refreshing file list..."):
+        st.session_state.file_list = assistant.list_files()
+    st.success("File list refreshed successfully!")
+
+def get_file_list(assistant):
+    if 'file_list' not in st.session_state:
+        refresh_file_list(assistant)
+    return st.session_state.file_list
+
+def upload_files(assistant):
+    uploaded_files = st.file_uploader("Upload PDF or TXT files", type=["pdf", "txt"], accept_multiple_files=True)
+    if uploaded_files:
+        existing_files = [file.name for file in get_file_list(assistant)]
+        for file in uploaded_files:
+            if file.name not in existing_files:
+                with st.spinner(f"Uploading {file.name}..."):
+                    # Save the file temporarily
+                    with open(file.name, "wb") as f:
+                        f.write(file.getbuffer())
+                    # Upload to Pinecone
+                    response = assistant.upload_file(file_path=file.name)
+                    st.success(f"{file.name} uploaded successfully!")
+            else:
+                st.info(f"{file.name} is already uploaded.")
+        refresh_file_list(assistant)  # Refresh the file list after uploads
+        return True
+    return False
+
+def list_and_delete_files(assistant):
+    files = get_file_list(assistant)
+    if files:
+        file_names = [file.name for file in files]
+        selected_file = st.selectbox("Select a file to delete", file_names)
+        
+        if st.button("Delete Selected File"):
+            file_id = next(file.id for file in files if file.name == selected_file)
+            assistant.delete_file(file_id=file_id)
+            st.success(f"{selected_file} deleted successfully!")
+            refresh_file_list(assistant)  # Refresh the file list after deletion
+            st.rerun()
+    else:
+        st.info("No files uploaded yet.")
+
+    if st.button("Refresh Database"):
+        refresh_file_list(assistant)
 
 
 # def check_password():
