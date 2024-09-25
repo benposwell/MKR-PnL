@@ -41,6 +41,20 @@ aest = pytz.timezone('Australia/Sydney')
 min_time = datetime(2024, 1, 1, tzinfo=aest).date()
 max_time = datetime(2030, 12, 31, tzinfo=aest).date()
 now = datetime.now(aest)
+curr_country_dict = {
+    "Australia 🇦🇺": "AUD",
+    "New Zealand 🇳🇿": "NZD",
+    "United States 🇺🇸": "USD",
+    "United Kingdom 🇬🇧": "GBP",
+    "Eurozone 🇪🇺": "EUR",
+    "Japan 🇯🇵": "JPY",
+    "China 🇨🇳": "CNY",
+    "Canada 🇨🇦": "CAD",
+    "Switzerland 🇨🇭": "CHF",
+    "Brazil 🇧🇷": "BRL",
+    "Mexico 🇲🇽": "MXN",
+    "India 🇮🇳": "INR"
+}
 
 client = get_mongo_access()
 db = client[st.secrets["MONGO_DB_NAME"]]
@@ -196,7 +210,7 @@ if st.session_state.current_chat_id:
             if st.button("ANZ Preview 🇦🇺", use_container_width=True):
                 this_week_string = datetime.strftime(now - timedelta(days=now.weekday()), '%Y-%m-%d')
                 prompt = f"""
-                    Summarise upcoming events in Australia and New Zealand for the week starting {this_week_string}. Include a preview that details analyst forecasts and current positioning.
+                    Summarise any upcoming economic calendar events that will occur in Australia and New Zealand or that are related to the AUD and NZD from {now.strftime('%Y-%m-%d')} onwards for the week starting {this_week_string}. Include a preview that details analyst forecasts and current positioning.
                 """
                 start_of_week = now - timedelta(days=now.weekday())
                 end_of_week = start_of_week + timedelta(days=6)
@@ -220,11 +234,33 @@ if st.session_state.current_chat_id:
             if st.button("US Preview 🇺🇸", use_container_width=True):
                 this_week_string = datetime.strftime(now - timedelta(days=now.weekday()), '%Y-%m-%d')
                 prompt = f"""
-                    Summarise upcoming events in the United States for the week starting {this_week_string}. Include a preview that details analyst forecasts and current positioning.
+                    Summarise any upcoming economic calendar events that will occur in the United States or that are related to the USD from {now.strftime('%Y-%m-%d')} onwards for the week starting {this_week_string}. Include a preview that details analyst forecasts and current positioning.
                 """
                 start_of_week = now - timedelta(days=now.weekday())
                 end_of_week = start_of_week + timedelta(days=6)
                 st.session_state.GPT_date_filter = [start_of_week.date(), end_of_week.date()]   
+                st.session_state.pinecone_date_filter = create_pinecone_date_filter(start_of_week, end_of_week)
+                st.session_state.autofill_prompt = prompt
+                st.session_state.show_preloaded_buttons = False
+                st.rerun()
+        # Create a dropdown list of countries
+        form = st.form(key="country_form")
+        with form:
+            countries = [
+                "Australia 🇦🇺", "New Zealand 🇳🇿", "United States 🇺🇸", "United Kingdom 🇬🇧", "Eurozone 🇪🇺", 
+                "Japan 🇯🇵", "China 🇨🇳", "Canada 🇨🇦", "Switzerland 🇨🇭", "Brazil 🇧🇷", "Mexico 🇲🇽", "India 🇮🇳"
+            ]
+            selected_country = st.selectbox("Select a country for weekly preview:", countries)
+            submitted = st.form_submit_button("Generate", use_container_width=True, type="primary")
+            this_week_string = datetime.strftime(now - timedelta(days=now.weekday()), '%Y-%m-%d')
+            if submitted:
+                prompt = f"""
+                    Summarise any upcoming economic calendar events that will occur in {selected_country} or that are related to the {curr_country_dict[selected_country]} currency from {now.strftime('%Y-%m-%d')} onwards for the week starting {this_week_string}. Include a preview that details analyst forecasts and current positioning.
+                """
+                time_now = now
+                start_of_week = time_now - timedelta(days=time_now.weekday())
+                end_of_week = start_of_week + timedelta(days=6)
+                st.session_state.GPT_date_filter = [start_of_week.date(), end_of_week.date()]
                 st.session_state.pinecone_date_filter = create_pinecone_date_filter(start_of_week, end_of_week)
                 st.session_state.autofill_prompt = prompt
                 st.session_state.show_preloaded_buttons = False

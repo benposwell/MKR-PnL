@@ -234,7 +234,7 @@ events_this_week = events_this_week[(events_this_week['RELEVANCY'] == 'Very High
 events_this_week = events_this_week.merge(averages, on='ID', how='left')
 
 events_this_week['BRAG Summary'] = events_this_week.apply(lambda row: generate_chat_url(
-    prompt=f"Provide details on {row['EVENT_NAME']}. Include a summary of all analyst forecasts and expectations, ensuring that a comprehensive overview is generated. If you can find it in the context, also include previous figures for this event, and any other relevant information.",
+    prompt=f"Provide details on the following event:{row['EVENT_NAME']} in {row['COUNTRY_NAME']}. Include a summary of all analyst forecasts and expectations, ensuring that a comprehensive overview is generated. If you can find it in the context, also include previous figures for this event, and any other relevant information.",
     min_date=None,
     max_date=None,
     search_comprehensiveness=None,
