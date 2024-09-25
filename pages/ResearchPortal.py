@@ -68,7 +68,7 @@ def display_documents(documents, filters):
         # Convert df_to_display['file_created_at'] to a string with format DD-MM-YYYY 
         
         df_to_display = unique_docs[['document_title', 'file_created_at', 'file_sender', 'BRAG Summary', 'web_url']]
-        df_to_display['file_created_at'] = pd.to_datetime(df_to_display['file_created_at']).dt.strftime('%d-%m-%Y')
+        df_to_display['file_created_at'] = pd.to_datetime(df_to_display['file_created_at'], errors='coerce', utc=True).dt.strftime('%d-%m-%Y')
 
         df_to_display = df_to_display.rename(columns={
             'document_title': 'Document Title',

@@ -6,7 +6,7 @@ import streamlit as st
 def display_metrics(documents):
     # Convert file_created_at to datetime
     documents_df = pd.DataFrame(documents)
-    documents_df['file_created_at'] = pd.to_datetime(documents_df['file_created_at'])
+    documents_df['file_created_at'] = pd.to_datetime(documents_df['file_created_at'], errors='coerce', utc=True)
     # Group by file_created_at and count the number of documents
     documents_by_day = documents_df.groupby(documents_df['file_created_at'].dt.date).size().reset_index(name='count')
     
