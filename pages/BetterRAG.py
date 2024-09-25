@@ -309,7 +309,8 @@ if st.session_state.current_chat_id:
             if sources:
                 sources_md = "\n\n### Sources:\n"
                 for source in sources:
-                    sources_md += f"- [{source['id']}] [{source['title']}]({source['url']}) (Created: {datetime.strptime(source['created_at'], '%Y-%m-%dT%H:%M:%S').strftime('%H:%M %A, %B %d, %Y')})\n"
+                    date_time_formatted = datetime.strptime(source['created_at'].split('+')[0], '%Y-%m-%d %H:%M:%S')
+                    sources_md += f"- [{source['id']}] [{source['title']}]({source['url']}) (Created: {date_time_formatted.strftime('%H:%M %A, %B %d, %Y')})\n"
                 full_response += sources_md
             
             message_placeholder.markdown(full_response)
