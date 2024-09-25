@@ -40,7 +40,7 @@ def display_documents(documents, filters):
     filtered_docs = documents
 
     if filters['file_name']:
-        filtered_docs = [doc for doc in filtered_docs if filters['file_name'].lower() in doc['document_title'].lower()]
+        filtered_docs = [doc for doc in filtered_docs if filters['file_name'].lower() in doc['document_title'].lower()] # BUG IN THIS LINE
     
     if filters['start_date'] and filters['end_date']:
         filtered_docs = [doc for doc in filtered_docs if filters['start_date'] <= datetime.strptime(doc['file_created_at'].split('T')[0], '%Y-%m-%d').date() <= filters['end_date']]
@@ -66,13 +66,14 @@ def display_documents(documents, filters):
             else:
                 unique_docs.loc[_, 'web_url'] = f"No URL available"
         # Convert df_to_display['file_created_at'] to a string with format DD-MM-YYYY 
+
+        unique_docs['formatted_datetime'] = unique_docs['file_created_at'].apply(lambda x: x.split('T')[0])
         
-        df_to_display = unique_docs[['document_title', 'file_created_at', 'file_sender', 'BRAG Summary', 'web_url']]
-        df_to_display['file_created_at'] = pd.to_datetime(df_to_display['file_created_at'], errors='coerce', utc=True).dt.strftime('%d-%m-%Y')
+        df_to_display = unique_docs[['document_title', 'formatted_datetime', 'file_sender', 'BRAG Summary', 'web_url']]
 
         df_to_display = df_to_display.rename(columns={
             'document_title': 'Document Title',
-            'file_created_at': 'File Created At',
+            'formatted_datetime': 'File Created At',
             'file_sender': 'File Sender'
         })
 
