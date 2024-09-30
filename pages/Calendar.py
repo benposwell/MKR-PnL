@@ -11,9 +11,9 @@ if not check_password():
     st.stop()
 
 pc = Pinecone(api_key = st.secrets["PINECONE_API_KEY"])
-assistant = pc.assistant.Assistant(
-    assistant_name = st.secrets["PINECONE_ASSISTANT_NAME"]
-)
+# assistant = pc.assistant.Assistant(
+#     assistant_name = st.secrets["PINECONE_ASSISTANT_NAME"]
+# )
 
 curr_country_dict = {
     'AUD': 'Australia',
@@ -92,68 +92,68 @@ cal_events['ID'] = cal_events['ID'].str.replace('Country', '')
 cal_events['RELEASE_DATE_TIME'] = pd.to_datetime(cal_events['RELEASE_DATE_TIME'])
 
 
-col1, col2 = st.columns(2)
-with col1:
-    date_selector = st.date_input("Select Date", value=datetime.now())
-    impacts = (cal_events['RELEVANCY'].unique())
-    default_impacts = ['Very High', 'High']
-    selected_impacts = st.multiselect("Select Impact Levels", impacts, default=default_impacts, key = "report_impacts_selector")
+# col1, col2 = st.columns(2)
+# with col1:
+#     date_selector = st.date_input("Select Date", value=datetime.now())
+#     impacts = (cal_events['RELEVANCY'].unique())
+#     default_impacts = ['Very High', 'High']
+#     selected_impacts = st.multiselect("Select Impact Levels", impacts, default=default_impacts, key = "report_impacts_selector")
 
-with col2:
-    countries = (cal_events['COUNTRY_NAME'].unique())
-    default_countries = ['Australia', 'United States', 'Japan', 'United Kingdom', 'China']
-    selected_countries = st.multiselect("Select Countries", countries, default=default_countries, key="report_countries_selector")
+# with col2:
+#     countries = (cal_events['COUNTRY_NAME'].unique())
+#     default_countries = ['Australia', 'United States', 'Japan', 'United Kingdom', 'China']
+#     selected_countries = st.multiselect("Select Countries", countries, default=default_countries, key="report_countries_selector")
     
     
 # Function to toggle show_raw_data
 def toggle_raw_data():
     st.session_state.show_raw_data = not st.session_state.show_raw_data
 
-col1, col2 = st.columns(2)
-with col2:
-    if st.button("Generate Daily Report", use_container_width=True):
-        filtered_df = cal_events[
-            (cal_events['RELEASE_DATE_TIME'].dt.date == date_selector) &
-            (cal_events['COUNTRY_NAME'].isin(selected_countries)) &
-            (cal_events['RELEVANCY'].isin(selected_impacts))
-        ]
-        with st.spinner("Generating report..."):
-            report_html = generate_day_ahead_preview(filtered_df, assistant)
-            st.session_state.report_html = report_html
-            store_report(st.session_state.report_html)
+# col1, col2 = st.columns(2)
+# with col2:
+#     if st.button("Generate Daily Report", use_container_width=True):
+#         filtered_df = cal_events[
+#             (cal_events['RELEASE_DATE_TIME'].dt.date == date_selector) &
+#             (cal_events['COUNTRY_NAME'].isin(selected_countries)) &
+#             (cal_events['RELEVANCY'].isin(selected_impacts))
+#         ]
+#         with st.spinner("Generating report..."):
+#             report_html = generate_day_ahead_preview(filtered_df, assistant)
+#             st.session_state.report_html = report_html
+#             store_report(st.session_state.report_html)
         
-with col1:
-    if st.button("Auto Generate Report", use_container_width=True):
-        curr_exp_data = st.session_state.curr_exp_data
-        if curr_exp_data is not None:
-            countries_of_interest = [curr_country_dict[curr] if not type(curr) == float else "" for curr in curr_exp_data['Currency'].unique()]
+# with col1:
+#     if st.button("Auto Generate Report", use_container_width=True):
+#         curr_exp_data = st.session_state.curr_exp_data
+#         if curr_exp_data is not None:
+#             countries_of_interest = [curr_country_dict[curr] if not type(curr) == float else "" for curr in curr_exp_data['Currency'].unique()]
 
-        filtered_df = cal_events[
-            (cal_events['RELEASE_DATE_TIME'].dt.date == datetime.now().date()) &
-            (cal_events['COUNTRY_NAME'].isin(countries_of_interest)) &
-            (cal_events['RELEVANCY'].isin(['High', 'Very High']))
-        ]
-        with st.spinner("Generating report..."):
-            report_html = generate_day_ahead_preview(filtered_df, assistant)
-            st.session_state.report_html = report_html
-            store_report(st.session_state.report_html)
+#         filtered_df = cal_events[
+#             (cal_events['RELEASE_DATE_TIME'].dt.date == datetime.now().date()) &
+#             (cal_events['COUNTRY_NAME'].isin(countries_of_interest)) &
+#             (cal_events['RELEVANCY'].isin(['High', 'Very High']))
+#         ]
+#         with st.spinner("Generating report..."):
+#             report_html = generate_day_ahead_preview(filtered_df, assistant)
+#             st.session_state.report_html = report_html
+#             store_report(st.session_state.report_html)
 
-st.divider()
-if st.session_state.report_html is None:
-    st.session_state.report_html = get_report()
+# st.divider()
+# if st.session_state.report_html is None:
+#     st.session_state.report_html = get_report()
 
 
-if st.session_state.report_html is not None:
-    st.success("Report has already been generated.")
-    if st.button("View Report", key="view_report", use_container_width=True):
-        st.html(st.session_state.report_html)
+# if st.session_state.report_html is not None:
+#     st.success("Report has already been generated.")
+#     if st.button("View Report", key="view_report", use_container_width=True):
+#         st.html(st.session_state.report_html)
 
-if hasattr(st.session_state, 'report_html'):
-    st.subheader("Email Report")
-    rec_options = ['bposwell@mkrcapital.com.au', 'arowe@mkrcapital.com.au', 'james.austin@missioncrestcapital.com']
-    recipient = st.multiselect("Select a recipient", rec_options)
-    if st.button("Send Report", use_container_width=True):
-        send_html_email(f"Day Ahead Preview - {datetime.now().strftime('%d-%m-%Y')}", st.session_state.report_html, recipient)
+# if hasattr(st.session_state, 'report_html'):
+#     st.subheader("Email Report")
+#     rec_options = ['bposwell@mkrcapital.com.au', 'arowe@mkrcapital.com.au', 'james.austin@missioncrestcapital.com']
+#     recipient = st.multiselect("Select a recipient", rec_options)
+#     if st.button("Send Report", use_container_width=True):
+#         send_html_email(f"Day Ahead Preview - {datetime.now().strftime('%d-%m-%Y')}", st.session_state.report_html, recipient)
 
 
 

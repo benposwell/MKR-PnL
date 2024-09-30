@@ -26,7 +26,7 @@ def init_connections():
     oai_client = OpenAI(api_key=st.secrets["OPENAI_API_KEY_MKR"])
     return encoder, index, oai_client
 
-@st.cache_data
+# @st.cache_data
 def get_document_list(_index):
     results = index.query(
         vector=[0]*3072,

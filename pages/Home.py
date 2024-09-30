@@ -255,11 +255,11 @@ st.data_editor(
 
 st.divider()
 
-if 'report_html' not in st.session_state:
-    st.session_state.report_html = get_report()
+# if 'report_html' not in st.session_state:
+#     st.session_state.report_html = get_report()
 
-if 'report_html' in st.session_state and st.session_state.report_html:
-    st.html(st.session_state.report_html)
+# if 'report_html' in st.session_state and st.session_state.report_html:
+#     st.html(st.session_state.report_html)
 
 # Apply custom CSS styling
 st.markdown(
