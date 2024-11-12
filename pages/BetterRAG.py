@@ -138,7 +138,7 @@ col1, col2 = st.columns(2)
 with col1:
     search_comprehensiveness = st.slider("Search Comprehensiveness", 
                                          min_value = 0.5, 
-                                         max_value = 2.0, 
+                                         max_value = 4.0, 
                                          value = st.session_state.search_comprehensiveness, 
                                          step = 0.1, 
                                          help="Adjust the comprehensiveness of the search. Higher values will search more documents. Returns 5*search_comprehensiveness documents.")
