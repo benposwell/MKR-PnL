@@ -39,14 +39,23 @@ def get_document_list(_index):
 def display_documents(documents, filters):
     filtered_docs = documents
 
+    if filters['file_text']:
+        filtered_docs = [doc for doc in filtered_docs if filters['file_text'].lower() in doc['document_title'].lower()]
+
     if filters['file_name']:
         filtered_docs = [doc for doc in filtered_docs if filters['file_name'].lower() in doc['document_title'].lower()] # BUG IN THIS LINE
     
     if filters['start_date'] and filters['end_date']:
         filtered_docs = [doc for doc in filtered_docs if filters['start_date'] <= datetime.strptime(doc['file_created_at'].split('T')[0], '%Y-%m-%d').date() <= filters['end_date']]
     
+    if filters['sender_text']:
+        filtered_docs = [doc for doc in filtered_docs if filters['sender_text'].lower() in doc['file_sender'].lower()]
+
     if filters['file_sender']:
-        filtered_docs = [doc for doc in filtered_docs if filters['file_sender'].lower() in doc['file_sender'].lower()]
+        if isinstance(filters['file_sender'], list):
+            filtered_docs = [doc for doc in filtered_docs if any(sender.lower() in doc['file_sender'].lower() for sender in filters['file_sender'])]
+        else:
+            filtered_docs = [doc for doc in filtered_docs if filters['file_sender'].lower() in doc['file_sender'].lower()]
 
     if filtered_docs:
         # Create a DataFrame with unique documents based on document_title
@@ -114,15 +123,17 @@ if st.button('Refresh Document List'):
 #     country_theme = st.multiselect("Pick a Country", ['Australia', 'UK', 'US', 'Eurozone'])
 
 # st.divider()
-st.write("**Advanced Search**")
+
 # Filters
 documents_df = pd.DataFrame(st.session_state.documents)
 col1, col2, col3 = st.columns(3)
 with col1:
-    file_name_filter = st.multiselect("Search", documents_df['document_title'].unique())
+    file_text = st.text_input("Search Documents", "")
+    file_name_filter = st.multiselect("Document Title", documents_df['document_title'].unique())
 with col2:
     date_range = st.date_input("Select Date Range", [])
-with col3:  
+with col3:
+    sender_text = st.text_input("Search Senders", "")
     file_sender_filter = st.multiselect("File Sender", documents_df['file_sender'].unique())
 
 # If a date range is selected, split it into start and end dates
@@ -135,8 +146,11 @@ filters = {
     'file_name': file_name_filter,
     'start_date': start_date,
     'end_date': end_date,
-    'file_sender': file_sender_filter
+    'file_sender': file_sender_filter,
+    'file_text': file_text,
+    'sender_text': sender_text
 }
+# st.write(st.session_state.documents)
 
 display_documents(st.session_state.documents, filters)
 
