@@ -3,9 +3,11 @@ import spacy
 import hmac
 from datetime import datetime
 
-
-def generate_chat_url(prompt, min_date=None, max_date=None, search_comprehensiveness=None, answer_detail=None):
+def generate_chat_url(prompt, doc_id = None, min_date=None, max_date=None, search_comprehensiveness=None, answer_detail=None):
+    # chat_url = f"http://localhost:8501/BetterRAG?prompt={prompt}"
     chat_url = f"https://mkrcapital.streamlit.app/BetterRAG?prompt={prompt}"
+    if doc_id:
+        chat_url += f"&doc_id={doc_id}"
     if min_date:
         chat_url += f"&min_date={min_date}"
     if max_date:

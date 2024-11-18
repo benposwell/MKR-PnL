@@ -20,6 +20,10 @@ def init_connections():
     oai_client = OpenAI(api_key=st.secrets["OPENAI_API_KEY_MKR"])
     return encoder, index, oai_client
 
+# def get_document_title(doc_id, index):
+#     matches = index.fetch(ids=[doc_id])
+#     return matches[doc_id]['metadata']['document_title']
+
 def gen_query_context(text, index, encoder, filters, search_comprehensiveness):
     query_filter = {}
     for f in filters:

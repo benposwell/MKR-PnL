@@ -63,6 +63,7 @@ def display_documents(documents, filters):
 
         unique_docs['BRAG Summary'] = unique_docs.apply(lambda row: generate_chat_url(
             prompt=f"Provide a summary of the analysis contained within the document titled {row['document_title']}. Include all key points and findings.",
+            doc_id = row['doc_id'],
             min_date=None,
             max_date=None,
             search_comprehensiveness=None,
