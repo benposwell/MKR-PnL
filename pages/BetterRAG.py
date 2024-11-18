@@ -80,10 +80,16 @@ if 'answer_detail' not in st.session_state:
 preloaded_prompt = st.query_params.get("prompt", None)
 preloaded_start_date = datetime.strptime(st.query_params.get("min_date", None), "%Y-%m-%d") if st.query_params.get("min_date") else None
 preloaded_end_date = datetime.strptime(st.query_params.get("max_date", None), "%Y-%m-%d") if st.query_params.get("max_date") else None
+preloaded_doc_id = st.query_params.get("doc_id", None)
 search_comprehensiveness = st.query_params.get("search_comprehensiveness", 1.0)
 answer_detail = st.query_params.get("answer_detail", 1.0)
 if preloaded_prompt:
     st.session_state.autofill_prompt = preloaded_prompt
+
+    if preloaded_doc_id:
+        # TODO: Load the document and all of its chunks into the chat
+        st.session_state.doc_filter = {"doc_id": preloaded_doc_id}
+
     if preloaded_start_date and preloaded_end_date:
         st.session_state.GPT_date_filter = [preloaded_start_date, preloaded_end_date]
         st.session_state.pinecone_date_filter = create_pinecone_date_filter(preloaded_start_date, preloaded_end_date)
@@ -93,6 +99,7 @@ if preloaded_prompt:
         st.session_state.search_comprehensiveness = float(search_comprehensiveness)
     if answer_detail is not None:
         st.session_state.answer_detail = float(answer_detail)
+    
     st.session_state.show_preloaded_buttons = False
     create_new_chat()
     st.session_state.preloaded_prompt_processed = True
@@ -151,10 +158,16 @@ with col2:
                               step = 0.1, 
                               help = "Adjust the level of detail in the answer. Higher values will provide more comprehensive answers.")
     st.session_state.answer_detail = answer_detail
+
+encoder, index, oai_client = init_connections()
+# if st.session_state.doc_filter is not None:
+    # doc_id = st.session_state.doc_filter['doc_id']
+    # document_title = get_document_title(doc_id, index)
+    # st.write(f"Summarising Document: {document_title}")
 ###################################################################################################################
 
 
-encoder, index, oai_client = init_connections()
+
 
 # Configure Sidebar ###########################################################################################
 st.sidebar.title(f"Welcome, {st.session_state.logged_in_user}!")
@@ -191,10 +204,15 @@ if st.session_state.current_chat_id:
         title_placeholder = st.empty()
         title_placeholder.subheader(f"{current_chat.get('name', 'Unnamed Chat')}")
     with col2:
-        st.button("➕", key="interior_new_chat", help="Create a new chat", 
-                  on_click=lambda: (save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection), create_new_chat(), 
-                                    st.rerun()), 
-                use_container_width=True, type="secondary")
+        if st.button("➕", key="interior_new_chat", help="Create a new chat", use_container_width=True, type="secondary"):
+            st.session_state.doc_filter = None
+            save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection)
+            create_new_chat()
+            st.rerun()
+        # st.button("➕", key="interior_new_chat", help="Create a new chat", 
+        #           on_click=lambda: (save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection), create_new_chat(), 
+                                    # st.rerun()), 
+                # use_container_width=True, type="secondary")
 
     if len(current_chat['messages']) == 0 and st.session_state.show_preloaded_buttons:
         col1, col2 = st.columns(2)
@@ -297,7 +315,11 @@ if st.session_state.current_chat_id:
             message_placeholder = st.empty()
             full_response = ""
             with st.spinner("Researching..."):
-                completion, sources = rag_pipeline(prompt, index, conversation, encoder, oai_client, [st.session_state.pinecone_date_filter], st.session_state.search_comprehensiveness, st.session_state.answer_detail)
+                if st.session_state.doc_filter:
+                    completion, sources = rag_pipeline(prompt, index, conversation, encoder, oai_client, [st.session_state.pinecone_date_filter, st.session_state.doc_filter], st.session_state.search_comprehensiveness, st.session_state.answer_detail)
+                    # st.session_state.doc_filter = None
+                else:
+                    completion, sources = rag_pipeline(prompt, index, conversation, encoder, oai_client, [st.session_state.pinecone_date_filter], st.session_state.search_comprehensiveness, st.session_state.answer_detail)
             for response in completion:
                 if isinstance(response, str):
                     full_response += response
@@ -322,9 +344,14 @@ if st.session_state.current_chat_id:
         st.rerun()
 else:
     st.info("Please create a new chat or select an existing one from below:")
-    st.button("➕", key="interior_new_chat", help="Create a new chat", 
-              on_click=lambda: (save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection), create_new_chat(), st.rerun()), 
-              use_container_width=True, type="secondary")
+    if st.button("➕", key="interior_new_chat", help="Create a new chat", use_container_width=True, type="secondary"):
+        st.session_state.doc_filter = None
+        save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection)
+        create_new_chat()
+        st.rerun()
+    # st.button("➕", key="interior_new_chat", help="Create a new chat", 
+    #           on_click=lambda: (save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection), create_new_chat(), st.rerun()), 
+            #   use_container_width=True, type="secondary")
     if len(st.session_state.chats) > 0:
         for chat_id, chat_data in st.session_state.chats.items():
             if isinstance(chat_data, dict) and 'name' in chat_data:
