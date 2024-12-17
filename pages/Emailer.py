@@ -72,17 +72,41 @@ with col1:
             st.warning("Please click 'Refresh Data' to load the data.")
         progress_bar.progress(100)
 with col2:
+    if 'show_confirmation' not in st.session_state:
+        st.session_state.show_confirmation = False
+    
+    # Define status_text outside both button handlers
+    status_text = st.empty()
+    
     if st.button("Send Latest", key="send_latest", use_container_width=True):
         progress_bar = st.progress(0)
-        status_text = st.empty()
-
-        most_recent_time, data, curr_exp_data ,dv01_data, cvar_data = get_data()
+        print("Getting data")
+        most_recent_time, data, curr_exp_data, dv01_data, cvar_data = get_data()
+        print("Data received")
         if data is not None:
-            send_email(interval, recipient, data, dv01_data, cvar_data, curr_exp_data, most_recent_time)
-            status_text.text("Email Sent!")
+            print("Data exists")
+            st.session_state.show_confirmation = True
+            st.session_state.temp_data = {
+                'most_recent_time': most_recent_time,
+                'data': data,
+                'curr_exp_data': curr_exp_data,
+                'dv01_data': dv01_data,
+                'cvar_data': cvar_data
+            }
         else:
             st.warning("Please click 'Refresh Data' to load the data.")
         progress_bar.progress(100)
+    
+    if st.session_state.show_confirmation:
+        if st.button(f"Latest available data is from {st.session_state.temp_data['most_recent_time'].strftime('%Y-%m-%d-%H-%M')}. Click to send email.", key="confirm_send", use_container_width=True):
+            send_email(interval, recipient, 
+                      st.session_state.temp_data['data'],
+                      st.session_state.temp_data['dv01_data'],
+                      st.session_state.temp_data['cvar_data'],
+                      st.session_state.temp_data['curr_exp_data'],
+                      st.session_state.temp_data['most_recent_time'])
+            status_text.text("Email Sent!")
+            st.session_state.show_confirmation = False  # Reset the confirmation state
 
 st.divider()
 

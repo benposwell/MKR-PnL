@@ -73,9 +73,10 @@ if 'show_preloaded_buttons' not in st.session_state:
 if 'search_comprehensiveness' not in st.session_state:
     st.session_state.search_comprehensiveness = 1.0
 if 'answer_detail' not in st.session_state:
-    st.session_state.answer_detail = 1.0
+    st.session_state.answer_detail = 2.0
+if 'doc_filter' not in st.session_state:
+    st.session_state.doc_filter = None
 ###################################################################################################################
-
 
 preloaded_prompt = st.query_params.get("prompt", None)
 preloaded_start_date = datetime.strptime(st.query_params.get("min_date", None), "%Y-%m-%d") if st.query_params.get("min_date") else None
@@ -158,6 +159,8 @@ with col2:
                               step = 0.1, 
                               help = "Adjust the level of detail in the answer. Higher values will provide more comprehensive answers.")
     st.session_state.answer_detail = answer_detail
+if st.session_state.doc_filter is not None:
+    st.write("Note: Filtering to a specific document")
 
 encoder, index, oai_client = init_connections()
 # if st.session_state.doc_filter is not None:
@@ -166,15 +169,13 @@ encoder, index, oai_client = init_connections()
     # st.write(f"Summarising Document: {document_title}")
 ###################################################################################################################
 
-
-
-
 # Configure Sidebar ###########################################################################################
 st.sidebar.title(f"Welcome, {st.session_state.logged_in_user}!")
 if st.sidebar.button("🏠", key="home_button", help="Return to BRAG Home", use_container_width=True):
     st.session_state.current_chat_id = None
     st.rerun()
 if st.sidebar.button("➕", key="new_chat", use_container_width=True):
+    st.session_state.doc_filter = None
     save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection)
     create_new_chat()
 st.sidebar.divider()
@@ -209,11 +210,8 @@ if st.session_state.current_chat_id:
             save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection)
             create_new_chat()
             st.rerun()
-        # st.button("➕", key="interior_new_chat", help="Create a new chat", 
-        #           on_click=lambda: (save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection), create_new_chat(), 
-                                    # st.rerun()), 
-                # use_container_width=True, type="secondary")
 
+    # No existing messages, show preloaded buttons
     if len(current_chat['messages']) == 0 and st.session_state.show_preloaded_buttons:
         col1, col2 = st.columns(2)
         with col1:
@@ -284,10 +282,12 @@ if st.session_state.current_chat_id:
                 st.session_state.show_preloaded_buttons = False
                 st.rerun()
     
+    # Show existing messages
     for message in current_chat['messages']:
         with st.chat_message(message['role'], avatar='images/icon.png' if message["role"] == "assistant" else "human"):
             st.markdown(message['content'])
     
+    # Show Chat Input Box
     prompt = st.chat_input(f"How can I help you this {'evening' if datetime.now(aest).hour >=18 else 'afternoon' if datetime.now(aest).hour>=12 else 'morning'}?")
 
     if prompt or st.session_state.autofill_prompt:
@@ -295,6 +295,7 @@ if st.session_state.current_chat_id:
         st.session_state.autofill_prompt = None
         st.session_state.show_preloaded_buttons = False
         # st.session_state.preloaded_prompt_processed = True
+        # If no existing messages, generate a subject
         if len(current_chat['messages']) == 0:
             stream = generate_subject(prompt, oai_client)
 
@@ -306,11 +307,14 @@ if st.session_state.current_chat_id:
 
             update_chat_name(st.session_state.current_chat_id, full_chat_name)
         
+        # Add user prompt to the chat
         with st.chat_message("user"):
             st.markdown(prompt)
         
+        # Get the last 5 messages from the chat
         conversation = "\n".join([f"{m['role']}: {m['content']}" for m in current_chat['messages'][-5:]])
         
+        # Generate a response
         with st.chat_message("assistant", avatar="images/icon.png"):
             message_placeholder = st.empty()
             full_response = ""
@@ -349,9 +353,7 @@ else:
         save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection)
         create_new_chat()
         st.rerun()
-    # st.button("➕", key="interior_new_chat", help="Create a new chat", 
-    #           on_click=lambda: (save_user_chats(st.session_state.logged_in_user, st.session_state.chats, custom_chats_collection), create_new_chat(), st.rerun()), 
-            #   use_container_width=True, type="secondary")
+
     if len(st.session_state.chats) > 0:
         for chat_id, chat_data in st.session_state.chats.items():
             if isinstance(chat_data, dict) and 'name' in chat_data:

@@ -12,7 +12,8 @@ if not check_password():
     st.stop()
 
 st.title("BRAG Research Portal")
-
+# write a link to the sharepoint folder which is at https://mkrcapitalcomau.sharepoint.com/sites/ResearchContent/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FResearchContent%2FShared%20Documents&sortField=Modified&isAscending=false&viewid=06f4b887%2De65c%2D43f8%2Db47c%2Db9e13a830a16
+st.write("[Link to Sharepoint Folder](https://mkrcapitalcomau.sharepoint.com/sites/ResearchContent/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FResearchContent%2FShared%20Documents&sortField=Modified&isAscending=false&viewid=06f4b887%2De65c%2D43f8%2Db47c%2Db9e13a830a16)")
 @st.cache_resource
 def init_connections():
     encoder = OpenAIEncoder(name="text-embedding-3-large", openai_api_key=st.secrets["OPENAI_API_KEY_MKR"])
