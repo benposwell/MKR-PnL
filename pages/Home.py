@@ -217,41 +217,41 @@ st.markdown(
     unsafe_allow_html=True
 )
 st.divider()
+st.write("Coming soon!")
+# curr_exp_data = st.session_state.curr_exp_data
+# if curr_exp_data is not None:
+#     countries_of_interest = [curr_country_dict[curr] if not type(curr) == float else "" for curr in curr_exp_data['Currency'].unique()]
+#     print(countries_of_interest)
 
-curr_exp_data = st.session_state.curr_exp_data
-if curr_exp_data is not None:
-    countries_of_interest = [curr_country_dict[curr] if not type(curr) == float else "" for curr in curr_exp_data['Currency'].unique()]
-    print(countries_of_interest)
 
+# week_events = pd.read_csv('data/bbg_sample_cal.csv')
+# averages = pd.read_csv('data/bbg_averages.csv')
+# week_events = week_events[week_events['COUNTRY_NAME'].isin(countries_of_interest)]
+# week_events['RELEASE_DATE_TIME'] = pd.to_datetime(week_events['RELEASE_DATE_TIME'])
+# week_events['FORMATTED_TIME'] = week_events['RELEASE_DATE_TIME'].dt.strftime("%H:%M, %A - %B %d")
+# events_this_week = week_events[(week_events['RELEASE_DATE_TIME'].dt.date >= datetime.now(pytz.timezone('Australia/Sydney')).date()) & (week_events['RELEASE_DATE_TIME'].dt.date <= datetime.now(pytz.timezone('Australia/Sydney')).date() + timedelta(days=7))]
+# events_this_week = events_this_week[(events_this_week['RELEVANCY'] == 'Very High') | (events_this_week['RELEVANCY'] == 'High')]
+# events_this_week = events_this_week.merge(averages, on='ID', how='left')
 
-week_events = pd.read_csv('data/bbg_sample_cal.csv')
-averages = pd.read_csv('data/bbg_averages.csv')
-week_events = week_events[week_events['COUNTRY_NAME'].isin(countries_of_interest)]
-week_events['RELEASE_DATE_TIME'] = pd.to_datetime(week_events['RELEASE_DATE_TIME'])
-week_events['FORMATTED_TIME'] = week_events['RELEASE_DATE_TIME'].dt.strftime("%H:%M, %A - %B %d")
-events_this_week = week_events[(week_events['RELEASE_DATE_TIME'].dt.date >= datetime.now(pytz.timezone('Australia/Sydney')).date()) & (week_events['RELEASE_DATE_TIME'].dt.date <= datetime.now(pytz.timezone('Australia/Sydney')).date() + timedelta(days=7))]
-events_this_week = events_this_week[(events_this_week['RELEVANCY'] == 'Very High') | (events_this_week['RELEVANCY'] == 'High')]
-events_this_week = events_this_week.merge(averages, on='ID', how='left')
+# events_this_week['BRAG Summary'] = events_this_week.apply(lambda row: generate_chat_url(
+#     prompt=f"Provide details on the following event:{row['EVENT_NAME']} in {row['COUNTRY_NAME']}. Include a summary of all analyst forecasts and expectations, ensuring that a comprehensive overview is generated. If you can find it in the context, also include previous figures for this event, and any other relevant information.",
+#     min_date=None,
+#     max_date=None,
+#     search_comprehensiveness=None,
+#     answer_detail=None
+# ), axis=1)
+# cols_to_show = ['FORMATTED_TIME', 'COUNTRY_NAME', 'EVENT_NAME', 'RELEVANCY', 'PRIOR', 'BRAG Summary', 'SURVEY_MEDIAN', '3M Average', '6M Average', '1Y Average', '3Y Average']
 
-events_this_week['BRAG Summary'] = events_this_week.apply(lambda row: generate_chat_url(
-    prompt=f"Provide details on the following event:{row['EVENT_NAME']} in {row['COUNTRY_NAME']}. Include a summary of all analyst forecasts and expectations, ensuring that a comprehensive overview is generated. If you can find it in the context, also include previous figures for this event, and any other relevant information.",
-    min_date=None,
-    max_date=None,
-    search_comprehensiveness=None,
-    answer_detail=None
-), axis=1)
-cols_to_show = ['FORMATTED_TIME', 'COUNTRY_NAME', 'EVENT_NAME', 'RELEVANCY', 'PRIOR', 'BRAG Summary', 'SURVEY_MEDIAN', '3M Average', '6M Average', '1Y Average', '3Y Average']
-
-st.data_editor(
-    events_this_week[cols_to_show],
-    column_config={
-        "BRAG Summary": st.column_config.LinkColumn("BRAG Summary", 
-                                                    width="medium", 
-                                                    display_text="Generate BRAG Summary")
-    },
-    hide_index=True,
-    use_container_width=True
-)
+# st.data_editor(
+#     events_this_week[cols_to_show],
+#     column_config={
+#         "BRAG Summary": st.column_config.LinkColumn("BRAG Summary", 
+#                                                     width="medium", 
+#                                                     display_text="Generate BRAG Summary")
+#     },
+#     hide_index=True,
+#     use_container_width=True
+# )
 
 st.divider()
 
